@@ -1,0 +1,12 @@
+**/compiled/*
+doc/
+**/*.bak
+**/*.html
+**/*.js
+*~
+**.rktd
+**.sxref
+
+private/tonart/soundfont/*
+
+.DS_Store
