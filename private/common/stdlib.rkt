@@ -6,11 +6,11 @@
 ;;;;;;;;;;;; SOME GENERIC OBJECTS that may come in handy.
 
 ;;;;;;; LISTS of ITEMS in a context.
-(define-art-object (list-items [items]))
+(define-art-object (seq [items]))
 (define-art-object (! [ix]))
 
-;; index into the `list-items` (convert `!`s to their corresponding objects)
-(define-rewriter list-item-ref
+;; index into the `seq` (convert `!`s to their corresponding objects)
+(define-rewriter seq-ref
   (syntax-parser
     [_ 
      #:with (result ...)
@@ -18,19 +18,25 @@
                  ([expr (current-ctxt)])
          (syntax-parse expr
            [({~datum !} value:number)
-             (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'list-items))
-             (unless items (raise-syntax-error 'list-item-ref "no list items in context for ref" expr))
+             (println "found !!")
+             (println (get-id-ctxt expr))
+             (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
+             (unless items 
+               (define msg (format "no list items in context for ref. context: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
+               (raise-syntax-error 'seq-ref msg expr))
              (syntax-parse items
                [(_ the-items ...) 
-                (cons (delete-expr expr) (cons (ctxt->@ (get-id-ctxt expr) (qq-art expr (put #,(list-ref (syntax->list #'(the-items ...)) (syntax-e #'value))))) acc))])]
+                (cons (delete-expr expr) (cons (qq-art expr (put #,(list-ref (syntax->list #'(the-items ...)) (syntax-e #'value)))) acc))])]
            [_ acc]))
-     (qq-art this-syntax (@ () result ...))]))
+     #'(@ () result ...)]))
+
+(define-for-syntax (un-@ expr) #`(@ [#,@(get-id-ctxt expr)] #,expr))
 
 (define-performer quote-performer 
   (λ(stx)
     (syntax-parse stx
       [(_ exprs ...)
-       #`'(#,@(for/list ([e (syntax->list #'(exprs ...))]) #`(@ [#,@(get-id-ctxt e)] #,e)))])))
+       #`'(#,@(for/list ([e (syntax->list #'(exprs ...))]) (un-@ e)))])))
 
 (begin-for-syntax 
   (struct art-subperformer/s [body]))
@@ -57,3 +63,47 @@
                      (define subperf (lookup subn))
                      ((art-subperformer/s-body subperf) (syntax->list #'(exprs (... ...)))))))
                #`(let () init-statement ... #,(combiner clauses))])))))
+
+(syntax-spec
+  
+  (nonterminal type-clause
+    (: name:id obj:art-object)
+    (@@ [obj:art-object] t:type-clause))
+
+    
+  ;; FIXME jagen use the binding stuff
+  (host-interface/definitions (define-standard-rewriter (name:rewriter [clause:type-clause ...]) body:expr)
+    #:binding (export name)
+    #:with ([head-name binding-clause] ...)
+      (for/list ([clause (syntax->list #'(clause ...))])
+        (syntax-parse clause
+          [({~literal :} binding:id head:id)
+           #'[binding
+              (filter (λ (expr) 
+                (syntax-parse expr
+                  [(head*:id _ (... ...))
+                   (free-identifier=? #'head* #'head)]))
+                (current-ctxt))]]))
+    #'(define-syntax name
+        (λ (stx)
+          (define head-name binding-clause) ...
+          (body head-name ...)))))
+          
+(define-syntax (define-mapping-rewriter stx)
+  (syntax-parse stx 
+    [(_ (name:id [clause ...]) body)
+    #'(define-standard-rewriter (name [clause ...]) 
+        (λ (melodies)
+          (with-syntax ([(result (... ...)) (for/list ([melody melodies]) (body melody))])
+            #'(@ () result (... ...)))))]))
+
+(define-syntax (define-simple-rewriter stx)
+  (syntax-parse stx 
+    [(_ name:id rewriter-name:id body ...)
+    #'(begin
+        (define-art-object (name []))
+        (define-mapping-rewriter (rewriter-name [(: _ name)]) 
+        (λ (obj)
+          (syntax-parse obj
+            [_
+             (qq-art obj (@ () body ...))]))))]))

@@ -1,6 +1,6 @@
 #lang racket
 
-(require "core.rkt" (for-syntax syntax/parse racket/list))
+(require "core.rkt" "stdlib.rkt" (for-syntax syntax/parse racket/list))
 (provide (all-defined-out))
 
 ;;;;;;;;;;; INTERVAL COORDINATE THINGS
@@ -25,7 +25,10 @@
          (unless (or (not e1) (not e*) (< e* e1)) (println "oops") #;(raise-syntax-error 'merger (format "end is outside of parent interval: ~s" e2) e2))
   
          (qq-art r (interval (start #,s*) (end #,e*)))]
-        [_ (error 'oops "whoops")])))
+        [_ 
+         (println "NOPE IM HERE")
+         (println #`(#,l #,r))
+         (error 'oops "whoops")])))
   
   (define (interval-within? l r)
     (let/ec break
@@ -54,21 +57,29 @@
        #:with (result ...)
          (for/fold ([acc '()] [t (syntax-e #'start*)] #:result (reverse acc))
                    ([box (syntax->list #'(box ...))] [l (syntax->list #'(len ...))] [e (syntax->list #'((expr ...) ...))])
-           (values (cons (qq-art box (i@ [#,t #,(+ t (syntax-e l))] #,@e)) acc) (+ t (syntax-e l))))
+           (values (cons #`(i@ [#,t #,(+ t (syntax-e l))] #,@e) acc) (+ t (syntax-e l))))
        (qq-art this-syntax (@ () result ...))])))
 
-(define-rewriter repeat
-  (syntax-parser
-    [(_ size*:number expr ...)
-     #:do [
-      (define size (syntax-e #'size*))
-      (define-values (the-start the-end) (syntax-parse (context-ref (current-coords) #'interval) 
-        [({~datum interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
-     ]
-     #:with (result ...)
-       (for/list ([i (range 0 (- the-end the-start) size)])
-         (qq-art this-syntax (pocket-rewrite expr ... (translate #,i))))
-     (qq-art this-syntax (@ ((interval (start #,the-start) (end #,the-end))) result ...))]))
+(define-art-object (repeat []))
+
+(define-mapping-rewriter (expand-repeat [(: repeats repeat)])
+  (λ (repeat)
+    (println "expanding repeat")
+    (println repeat)
+    (syntax-parse repeat
+      [(_ size*:number expr ...)
+       #:do [
+        (define size (syntax-e #'size*))
+        (define-values (the-start the-end) (syntax-parse (context-ref (get-id-ctxt repeat) #'interval) 
+          [({~datum interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
+        (println the-start)
+       ]
+       #:with (result ...)
+         (for/list ([i (in-range 0 (- the-end the-start) size)])
+           #`[#,size expr ...])
+       (qq-art this-syntax (-- 0 result ...))]
+      [_ (error 'expand-repeat "oops")])))
+  
 
 (define-rewriter translate
   (syntax-parser
@@ -82,3 +93,23 @@
            (@ [(interval (start value) (end +inf.0))] 
              (@ [#,@(get-id-ctxt expr)] (put #,expr)))) acc)))
      (qq-art this-syntax (@ () result ...))]))
+
+(define-art-object (rhythm []))
+
+(define-mapping-rewriter (apply-rhythm [(: rhythms rhythm)])
+  (λ (r)
+    (syntax-parse r
+      [(_ expr:number ...)
+       ;; FIXME copy id ctxt
+       #:with (result ...)
+         (for/list ([e (syntax->list #'(expr ...))] [i (in-naturals)])
+           #`[#,e (! #,i)])
+
+      (println "ALMOST DONE")
+      (println (syntax->list #'(result ...)))
+      (println (get-id-ctxt r))
+       (qq-art this-syntax
+          (@ ()
+            (-- 0 result ...)
+            ;; FIXME jagen TOTALLY UNSAFE (this will seq-ref in the surrounding context :'( )
+            (seq-ref)))])))

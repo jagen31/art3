@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../common/core.rkt" "../common/stdlib.rkt" "../common/interval.rkt" racket/runtime-path 
+(require "../common/core.rkt" "../common/stdlib.rkt" "../common/interval.rkt" "../common/subset.rkt" racket/runtime-path 
   (for-syntax syntax/parse racket/match racket/list) rsound rsound/envelope sf2-parser)
 (provide (all-defined-out))
 
@@ -85,17 +85,21 @@
 (define-art-object (tone [freq]))
 ;; subperformer for performing tones from a context
 (define (get-duration start end)
-  (* (/ (- end start) 2) (default-sample-rate)))
+  (round (* (/ (- end start) 2) (default-sample-rate))))
 (define-subperformer tone-subperformer
   (λ(ctxt)
+    (println "performing tones")
+    (println ctxt)
     (for/foldr ([acc '()])
                ([stx ctxt])
       (syntax-parse stx
         [({~datum tone} freq) 
+
+         (println "FOUND TONE")
          (define-values (start* end*) (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
            [({~datum interval} ({~datum start} val:number) ({~datum end} val2:number)) (values (syntax-e #'val) (syntax-e #'val2))]))
          (cons #`(let ([duration (get-duration #,start* #,end*)]) 
-             (cons (* #,start* (/ (default-sample-rate) 2))
+             (cons (round (* #,start* (/ (default-sample-rate) 2)))
                    (rs-scale 2 (rs-mult (sine-window duration (floor (/ duration 4))) (make-tone freq 0.1 duration))))) acc)]
         [_ acc]))))
 
@@ -121,10 +125,18 @@
          (unless instrument (raise-syntax-error 'midi-subperformer "no instrument in context for midi" stx))
          (syntax-parse instrument
            [({~datum instrument} name:id)
+            (println #'num)
             (cons #`(let ([duration (get-duration #,start* #,end*)]) 
-              (cons (* #,start* (/ (default-sample-rate) 2))
+              (cons (round (* #,start* (/ (default-sample-rate) 2)))
                     (preset-midi->rsound (load-preset fluid (symbol->string (syntax->datum #'name))) (syntax-e #'num) duration))) acc)])]
         [_ acc]))))
 
+
 (define-composite-pstream-performer music-pstream-performer {tone-subperformer midi-subperformer})
 (define-composite-rsound-performer music-rsound-performer {tone-subperformer midi-subperformer})
+
+(define-rewriter m@
+  (λ(stx)
+    (syntax-parse stx
+      [(_ [start*:number end*:number (voice:id ...)] expr ...)
+       (qq-art stx (@ [(interval (start start*) (end end*)) (subset voice ...)] expr ...))])))
