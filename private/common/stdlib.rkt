@@ -18,8 +18,6 @@
                  ([expr (current-ctxt)])
          (syntax-parse expr
            [({~datum !} value:number)
-             (println "found !!")
-             (println (get-id-ctxt expr))
              (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
              (unless items 
                (define msg (format "no list items in context for ref. context: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
@@ -85,9 +83,10 @@
                    (free-identifier=? #'head* #'head)]))
                 (current-ctxt))]]))
     #'(define-syntax name
-        (λ (stx)
-          (define head-name binding-clause) ...
-          (body head-name ...)))))
+        (rewriter/s 
+          (λ (stx)
+            (define head-name binding-clause) ...
+            (body head-name ...))))))
           
 (define-syntax (define-mapping-rewriter stx)
   (syntax-parse stx 

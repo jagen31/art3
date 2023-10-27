@@ -8,6 +8,7 @@
 
 (begin-for-syntax
   (struct object/s [])
+  (struct rewriter/s [body])
   (struct coordinate/s [merger within?])
   (define current-ctxt (make-parameter '())))
 
@@ -39,7 +40,7 @@
 
   (host-interface/definitions (define-rewriter r:rewriter body:expr)
     #:binding (export r)
-    #'(define-syntax r body))
+    #'(define-syntax r (rewriter/s body)))
 
   (host-interface/definitions (define-performer perf:art-performer body:expr)
     #:binding (export perf)
@@ -151,6 +152,11 @@
           [({~datum put} inner-expr ...)
            (define coordinated
              (for/list ([inner-expr (syntax->list #'(inner-expr ...))])
+               (syntax-parse inner-expr
+                 [(head:id arg ...)
+                  #:do [(define it (lookup #'head))]
+                  #:fail-unless (object/s? it) (raise-syntax-error 'compile-rewrite-exprs (format "unrecognized object: ~a" (syntax->datum inner-expr)) inner-expr)
+                  (void)])
                (set-id-ctxt
                 inner-expr
                 ;; FIXME jagen gensym
@@ -166,15 +172,9 @@
                     [_ #t])) ctxt))
             (compile-rewrite-exprs (cdr exprs) ctxt*)]
           [({~datum @} [coord ...] body ...)
-           (println "merge1")
-           (println (get-id-ctxt expr))
-           (println (syntax->list #'(coord ...)))
-           (println (merge-coordinates (or (get-id-ctxt expr) '()) (syntax->list #'(coord ...))))
            (define coords* (merge-coordinates (or (get-id-ctxt expr) '()) (syntax->list #'(coord ...))))
            (define coordinated 
              (for/list ([b (syntax->list #'(body ...))])
-               (println "merge2")
-               (println (merge-coordinates coords* (or (get-id-ctxt b) '())))
                (set-id-ctxt b (merge-coordinates coords* (or (get-id-ctxt b) '())))))
            (define ctxt* (compile-rewrite-exprs coordinated ctxt))
            (compile-rewrite-exprs (cdr exprs) ctxt*)]
@@ -185,8 +185,8 @@
            #:when (lookup #'object object/s?)
            (compile-rewrite-exprs (cons (qq-art expr (put #,expr)) (cdr exprs)) ctxt)]
           [(realizer:id arg ...)
-           (println "realizing")
-           (println #'realizer)
-           (println (lookup #'realizer))
-           (define realized (parameterize ([current-ctxt ctxt]) ((lookup #'realizer) expr)))
-           (compile-rewrite-exprs (cons realized (cdr exprs)) ctxt)])]))
+           #:when (lookup #'realizer rewriter/s?)
+           (define realized (parameterize ([current-ctxt ctxt]) ((rewriter/s-body (lookup #'realizer)) expr)))
+           (compile-rewrite-exprs (cons realized (cdr exprs)) ctxt)]
+          [(unknown:id arg ...)
+           (raise-syntax-error 'compile-rewrite-exprs (format "unknown rewriter: ~a" (syntax->datum expr)) expr)])]))

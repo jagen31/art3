@@ -1,6 +1,8 @@
 #lang racket
 
-(require "../common/core.rkt" "../common/stdlib.rkt" "../common/interval.rkt" "../common/subset.rkt" "music.rkt" "hymn-library.rkt"
+(require "../../common/core.rkt" "../../common/stdlib.rkt" 
+         "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
+         "../stdlib.rkt" "../common-practice/lib.rkt" "../computer/lib.rkt" "../organ/hymn.rkt"
   rsound (for-syntax syntax/parse))
 
 
@@ -14,9 +16,6 @@
   (m@ [0 32 (bass)] 
     ;; ... but not in the bass
     (repeat 8 (rhythm 2 2 2 2))))
-
-
-
 
 
 ;; these are example sequences i have in mind. the sequences gotta have the same
@@ -47,8 +46,8 @@
 
   ;; we'll render these as midi, which requires an instrument specified.
   ;; the instruments to use:
-  (m@ [0 32 (melody)] (instrument Clarinet))
-  (m@ [0 32 (bass)] (instrument Cello))
+  (m@ [0 32 (melody)] (instrument |Tromp. en chamade|))
+  (m@ [0 32 (bass)] (instrument |Krummhorn 8|))
 
   ;; render things
   (i@ [0 32] 

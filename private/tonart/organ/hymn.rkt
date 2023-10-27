@@ -1,6 +1,7 @@
 #lang racket
 
-(require "../common/core.rkt" "../common/stdlib.rkt" "../common/interval.rkt" "music.rkt" (for-syntax syntax/parse))
+(require "../../common/core.rkt" "../../common/stdlib.rkt" "../../common/coordinate/interval.rkt" 
+         "../stdlib.rkt" "../common-practice/lib.rkt" (for-syntax syntax/parse))
 (provide (all-defined-out))
 
 (define-art-object (st-flavian []))

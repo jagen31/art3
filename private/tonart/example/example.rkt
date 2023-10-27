@@ -1,6 +1,9 @@
 #lang racket
 
-(require "../common/core.rkt" "../common/stdlib.rkt" "../common/interval.rkt" "music.rkt" "hymn-library.rkt"
+(require "../../common/core.rkt" "../../common/stdlib.rkt" 
+         "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
+         "../stdlib.rkt" "../common-practice/lib.rkt"
+         "../computer/lib.rkt" "../organ/hymn.rkt"
   rsound (for-syntax syntax/parse))
 (set-output-device! 1)
 
@@ -27,11 +30,11 @@
 
      (qq-art this-syntax (@ () result ...))]))
 
-#;(define test (perform music-rsound-performer 
+(define test (perform music-rsound-performer 
   (i@ [0 4] (tone 440))
   (i@ [0 6] (repeat 2 (my-music))) ;; -> my-music => my-music
   (pocket-rewrite
-    (i@ [0 12] (instrument Clarinet))
+    (i@ [0 12] (instrument |Montre 8 Flute 4|))
     (i@ [0 10] (midi 61))
     (translate 2))
   (my-music->objs) ;; my-music -> ! => !
@@ -45,7 +48,7 @@
   (i@ [0 24] (st-flavian))
   (st-flavian->notes)
 
-  (i@ [0 100] (instrument |Yamaha Grand Piano|))
+  (i@ [0 100] (instrument |Tromp. en chamade|))
   (pocket-rewrite
     (i@ [0 24] (stuttgart))
     (stuttgart->notes)
@@ -77,13 +80,13 @@
 
 (define-simple-rewriter do-it expand-do-it (repeat 6 (i@ [0 2] (rhythm 2 2 2))))
 
-#;(perform quote-performer
+#;(perform music-pstream-performer
   (i@ [0 18] (do-it) (expand-do-it) (expand-repeat) (seq (note a 0 4) (note b 0 4) (note c 0 5)) (apply-rhythm))
-  (i@ [0 18] (instrument |Yamaha Grand Piano|) (note->midi)))
+  (i@ [0 18] (instrument |Montre 8 Flute 4|) (note->midi)))
 
-(perform quote-performer
+#;(perform quote-performer
   (-- 0 [2 (! 0)] [2 (! 1)] [2 (! 2)])
   (i@ [0 8] (seq (tone 440) (tone 550) (tone 660)) (seq-ref)))
 
-#;(play test)
-#;(rs-write test "test.wav")
+(play test)
+(rs-write test "test.wav")

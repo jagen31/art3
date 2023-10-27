@@ -7,6 +7,6 @@ doc/
 **.rktd
 **.sxref
 
-private/tonart/soundfont/*
+**/soundfont/*
 
 .DS_Store

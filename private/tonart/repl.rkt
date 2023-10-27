@@ -1,5 +1,5 @@
 #lang racket
-(require rsound "../common/core.rkt" "../common/stdlib.rkt" "../common/interval.rkt" "music.rkt"  "hymn-library.rkt"
+(require rsound "../common/core.rkt" "../common/stdlib.rkt" "../common/coordinate/interval.rkt"
   (for-syntax racket syntax/parse))
 
 (define-for-syntax the-exprs (box '()))

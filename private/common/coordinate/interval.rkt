@@ -1,6 +1,6 @@
 #lang racket
 
-(require "core.rkt" "stdlib.rkt" (for-syntax syntax/parse racket/list))
+(require "../core.rkt" "../stdlib.rkt" (for-syntax syntax/parse racket/list))
 (provide (all-defined-out))
 
 ;;;;;;;;;;; INTERVAL COORDINATE THINGS
@@ -26,8 +26,6 @@
   
          (qq-art r (interval (start #,s*) (end #,e*)))]
         [_ 
-         (println "NOPE IM HERE")
-         (println #`(#,l #,r))
          (error 'oops "whoops")])))
   
   (define (interval-within? l r)
@@ -64,15 +62,12 @@
 
 (define-mapping-rewriter (expand-repeat [(: repeats repeat)])
   (λ (repeat)
-    (println "expanding repeat")
-    (println repeat)
     (syntax-parse repeat
       [(_ size*:number expr ...)
        #:do [
         (define size (syntax-e #'size*))
         (define-values (the-start the-end) (syntax-parse (context-ref (get-id-ctxt repeat) #'interval) 
           [({~datum interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
-        (println the-start)
        ]
        #:with (result ...)
          (for/list ([i (in-range 0 (- the-end the-start) size)])
@@ -105,9 +100,6 @@
          (for/list ([e (syntax->list #'(expr ...))] [i (in-naturals)])
            #`[#,e (! #,i)])
 
-      (println "ALMOST DONE")
-      (println (syntax->list #'(result ...)))
-      (println (get-id-ctxt r))
        (qq-art this-syntax
           (@ ()
             (-- 0 result ...)

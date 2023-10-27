@@ -1,6 +1,6 @@
 #lang racket
 
-(require "core.rkt" "stdlib.rkt" (for-syntax syntax/parse racket/list racket/set syntax/id-set))
+(require "../core.rkt" "../stdlib.rkt" (for-syntax syntax/parse racket/list racket/set syntax/id-set))
 (provide (all-defined-out))
 
 ;;;;;;;;;;; SUBSET COORDINATE THINGS
@@ -16,7 +16,6 @@
            (free-id-set->list (immutable-free-id-set (append (syntax->list #'(item ...)) (syntax->list #'(item* ...)))))
          (qq-art l (subset result ...))]
         [_ 
-         (println "I AM HERE")
          (error 'oops "whoops")])))
   
   (define (subset-within? l r)
@@ -25,8 +24,6 @@
       (unless l (break #f))
       (syntax-parse #`(#,l #,r)
         [((_ item:id ...) (_ item*:id ...))
-         (println #'(item ...))
-         (println #'(item* ...))
          (free-id-subset? (immutable-free-id-set (syntax->list #'(item ...))) (immutable-free-id-set (syntax->list #'(item* ...))))]))))
 
 (define-coordinate (subset [] merge-subset subset-within?))
