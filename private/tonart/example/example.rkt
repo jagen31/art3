@@ -71,22 +71,5 @@
   (m@ [2 32 (one)] (apply-rhythm))
   )
 
-#;(perform quote-performer 
-  (i@ [0 8] 
-    (repeat 2 (rhythm .25 .25 1 .5)) 
-    (expand-repeat) 
-    (seq (tone 440) (tone 550) (tone 660) (tone 550))
-    (apply-rhythm)))
-
-(define-simple-rewriter do-it expand-do-it (repeat 6 (i@ [0 2] (rhythm 2 2 2))))
-
-#;(perform music-pstream-performer
-  (i@ [0 18] (do-it) (expand-do-it) (expand-repeat) (seq (note a 0 4) (note b 0 4) (note c 0 5)) (apply-rhythm))
-  (i@ [0 18] (instrument |Montre 8 Flute 4|) (note->midi)))
-
-#;(perform quote-performer
-  (-- 0 [2 (! 0)] [2 (! 1)] [2 (! 2)])
-  (i@ [0 8] (seq (tone 440) (tone 550) (tone 660)) (seq-ref)))
-
 (play test)
 (rs-write test "test.wav")

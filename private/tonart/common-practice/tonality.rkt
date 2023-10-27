@@ -1,6 +1,8 @@
 #lang racket
 
 (require data/collection (prefix-in list: racket/base))
+(provide (all-defined-out))
+
 (module+ test (require rackunit))
 
 ;; starting on f is nice for computations
@@ -23,7 +25,7 @@
     (match type 
       ['perfect (if (= num* 4) -1 0)] 
       ['major 0] ['minor -1] 
-      ['diminished (if (= num* 5) -1 -2)] ['augmented (if (eq? num* 4) 0 1)])))
+      ['diminished (if (or (= num* 1) (= num* 5)) -1 -2)] ['augmented (if (eq? num* 4) 0 1)])))
   (list pitch* accidental**))
 
 
@@ -53,8 +55,10 @@
 
       ((a 0 1 perfect) . (a 0))
       ((a 0 1 augmented) . (a 1))
+      ((a 0 1 diminished) . (a -1))
       ((a 0 8 perfect) . (a 0))
-      ((a 0 8 augmented) . (a 1))))
+      ((a 0 8 augmented) . (a 1))
+      ((a 0 8 diminished) . (a -1))))
 
   (for-each (λ (x) (check-equal? (apply transpose-by-interval (car x)) (cdr x))) input-result-pairs))
 

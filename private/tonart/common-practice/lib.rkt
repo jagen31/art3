@@ -2,7 +2,7 @@
 
 (require "../../common/core.rkt" "../../common/stdlib.rkt" "../../common/coordinate/interval.rkt" 
          "../computer/lib.rkt"
-         (for-syntax syntax/parse racket/match))
+         (for-syntax syntax/parse racket/match racket/list "tonality.rkt"))
 (provide (all-defined-out))
 
 ;;;;;;;;;; notes!  considered fairly fundamental...
@@ -49,5 +49,27 @@
      (qq-art this-syntax (@ () result ...))]))
 
 
-(define-art-object (key [pitch a* mode]))
+(define-art-object (key [pitch accidental mode]))
 (define-art-object (^ [degree]))
+(define-art-object (octave [o]))
+
+(define-rewriter ^->note
+  (syntax-parser
+    [_ 
+     #:with (result ...)
+       (for/fold ([acc '()] #:result (reverse acc)) 
+                 ([expr (current-ctxt)])
+         (syntax-parse expr
+           [({~datum ^} ix:number)
+            (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'key)
+              [({~datum key} pitch:id accidental:number mode:id)
+               (define octave 
+                 (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'octave)
+                   [(octave o:number) (syntax-e #'o)]))
+               (define scale (generate-scale (syntax->datum #'pitch) (syntax->datum #'accidental) (syntax->datum #'mode)))
+               (match-define (list p a) (list-ref scale (sub1 (syntax-e #'ix))))
+               (define c (index-where scale (λ (x) (eq? (car x) 'c))))
+               (define o (if (>= (sub1 (syntax-e #'ix)) c) octave (sub1 octave)))
+               (cons (delete-expr expr) (cons (ctxt->@ (get-id-ctxt expr) (qq-art expr (put (note #,p #,a #,o)))) acc))])]
+           [_ acc]))
+     (qq-art this-syntax (@ () result ...))]))
