@@ -22,7 +22,8 @@
          (define e1 (syntax-e #'e1*))
          (when (and (not e1) (not e2)) (break #f))
          (define e* (and e2 (+ s1 e2)))
-         (unless (or (not e1) (not e*) (< e* e1)) (println "oops") #;(raise-syntax-error 'merger (format "end is outside of parent interval: ~s" e2) e2))
+
+         #;(unless (or (not e1) (not e*) (< e* e1)) (println "oops") #;(raise-syntax-error 'merger (format "end is outside of parent interval: ~s" e2) e2))
   
          (qq-art r (interval (start #,s*) (end #,e*)))]
         [_ 

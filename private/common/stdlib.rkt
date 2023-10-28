@@ -14,18 +14,23 @@
   (syntax-parser
     [_ 
      #:with (result ...)
-       (for/fold ([acc '()] #:result (reverse acc)) 
-                 ([expr (current-ctxt)])
-         (syntax-parse expr
-           [({~datum !} value:number)
-             (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
-             (unless items 
-               (define msg (format "no list items in context for ref. context: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
-               (raise-syntax-error 'seq-ref msg expr))
-             (syntax-parse items
-               [(_ the-items ...) 
-                (cons (delete-expr expr) (cons (qq-art expr (put #,(list-ref (syntax->list #'(the-items ...)) (syntax-e #'value)))) acc))])]
-           [_ acc]))
+     (begin
+       (define-values (exprs deletes)
+         (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2))) 
+                   ([expr (current-ctxt)])
+           (syntax-parse expr
+             [({~datum !} value:number)
+               (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
+               (unless items 
+                 (define msg (format "no list items in context for ref. context: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
+                 (raise-syntax-error 'seq-ref msg expr))
+               (syntax-parse items
+                 [(_ the-items ...) 
+                  (values (cons (qq-art expr (put #,(list-ref (syntax->list #'(the-items ...)) (syntax-e #'value)))) acc1)
+                          (cons (delete-expr expr) acc2))])]
+             [_ (values acc1 acc2)])))
+        (append deletes exprs))
+
      #'(@ () result ...)]))
 
 (define-for-syntax (un-@ expr) #`(@ [#,@(get-id-ctxt expr)] #,expr))
@@ -93,7 +98,12 @@
     [(_ (name:id [clause ...]) body)
     #'(define-standard-rewriter (name [clause ...]) 
         (λ (melodies)
-          (with-syntax ([(result (... ...)) (for/list ([melody melodies]) (body melody))])
+          (with-syntax ([(result (... ...))
+            (append
+              (for/list ([melody melodies]) (delete-expr melody))
+              (for/list ([melody melodies]) 
+                (parameterize ([current-ctxt (filter (λ(expr) (within? (get-id-ctxt expr) (get-id-ctxt melody))) (current-ctxt))])
+                  (body melody))))])
             #'(@ () result (... ...)))))]))
 
 (define-syntax (define-simple-rewriter stx)

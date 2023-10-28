@@ -6,7 +6,7 @@
 (provide (all-defined-out))
 
 (define-rewriter m@
-  (λ(stx)
+  (λ (stx)
     (syntax-parse stx
       [(_ [start*:number end*:number (voice:id ...)] expr ...)
        (qq-art stx (@ [(interval (start start*) (end end*)) (subset voice ...)] expr ...))])))

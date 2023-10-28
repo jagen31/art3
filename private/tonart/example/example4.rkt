@@ -5,7 +5,7 @@
          "../stdlib.rkt" "../common-practice/lib.rkt"
          "../computer/lib.rkt" "../organ/hymn.rkt"
   rsound (for-syntax syntax/parse))
-(set-output-device! 3)
+(set-output-device! 1)
 
 #;(perform quote-performer 
   (i@ [0 8] 
@@ -16,17 +16,17 @@
     (seq (tone 440) (tone 550) (tone 660) (tone 550))
     (apply-rhythm)))
 
-(define-simple-rewriter do-it expand-do-it (repeat 6 (i@ [0 2] (rhythm 2 2 2))))
+(define-simple-rewriter do-it expand-do-it (repeat 6 (i@ [0 6] (rhythm 2 2 2))))
 
-#;(perform music-pstream-performer
-  (i@ [0 18] (do-it) (expand-do-it) (expand-repeat) (seq (note a 0 4) (note b 0 4) (note c 0 5)) (apply-rhythm))
-  (i@ [0 18] (instrument |Montre 8 Flute 4|) (note->midi)))
+(perform #;quote-performer music-pstream-performer
+  (i@ [0 18] (do-it) (expand-do-it) (expand-repeat) (seq (note a 0 3) (note b 0 3) (note c 0 4)) (apply-rhythm))
+  (i@ [0 18] (instrument |G.o. reeds 8-4|) (note->midi)))
 
 #;(perform quote-performer
   (-- 0 [2 (! 0)] [2 (! 1)] [2 (! 2)])
   (i@ [0 8] (seq (tone 440) (tone 550) (tone 660)) (seq-ref)))
 
-(define result 
+#;(define result 
   (perform music-rsound-performer 
 
     ;; the keys
@@ -47,5 +47,9 @@
 
     (i@ [0 9] (expand-repeat) (^->note) (note->midi))))
 
-(play result)
-(rs-write result "test.wav")
+#;(perform quote-performer 
+  (m@ [0 4 (v1)] (i@ [2 4] (tone 440)))
+  (m@ [0 4 (v1)] (copy-to (v2))))
+
+#;(play result)
+#;(rs-write result "test.wav")

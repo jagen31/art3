@@ -33,3 +33,18 @@
     (syntax-parse stx
       [(_ [item ...] expr ...)
        (qq-art stx (@ [(subset item ...)] expr ...))])))
+
+(define-rewriter copy-to
+  (λ (stx)
+    (syntax-parse stx
+      [(_ (ss* ...))
+       (define coords (syntax->list #'(ss* ...)))
+       (define target
+         (filter 
+           (λ(expr) (within? (get-id-ctxt expr) (get-id-ctxt stx)))
+           (current-ctxt)))
+       (with-syntax ([(target* ...)
+         (for/list ([item target])
+           ;; FIXME jagen preserve orthogonality?
+           #`(put #,(put-in-id-ctxt item #'subset #'(ss* ...))))])
+         #`(@ () target* ...))])))

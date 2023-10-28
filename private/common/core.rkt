@@ -51,8 +51,6 @@
     #'(perf expr ...)))
 
 
-(define-coordinate (id [] (λ (l r) (or r l)) (λ (_ __) #t)))
-
 (begin-for-syntax
 
    ;;;;;;;; RENAMED REFERENCE THINGS
@@ -80,9 +78,12 @@
     (syntax-parse stx
       [(_ loc+id-ctxt expr) 
        #:with compiled #'(quasisyntax/loc loc+id-ctxt #,(compile-art-references #`expr))
-       (quasisyntax/loc this-syntax (set-id-ctxt compiled '()))]))
+       (quasisyntax/loc this-syntax (set-id-ctxt compiled '()))])))
 
 
+(define-coordinate (id [] (λ (l r) (or r (qq-art l (id #,(gensym))))) (λ (_ __) #t)))
+
+(begin-for-syntax
   ;;;;;;;;;; CONTEXT THINGS
   (define id-ctxt-prop (gensym))
 
@@ -90,6 +91,13 @@
     (with-syntax ([(ctxt* ...) ctxt] [expr* expr]) (qq-art expr (@ [ctxt* ...] expr*))))
   (define (get-id-ctxt stx) (syntax-property stx id-ctxt-prop))
   (define (set-id-ctxt stx ctxt) (syntax-property stx id-ctxt-prop ctxt))
+  (define (put-in-id-ctxt stx k v) (syntax-property stx id-ctxt-prop 
+    (for/list ([prop (get-id-ctxt stx)])
+      (syntax-parse prop
+        [(head:id _ ...)
+         #:when (free-identifier=? (compiled-from #'head) k)
+         (qq-art k (#,k #,@v))]
+        [_ prop]))))
   (define (context-ref* ctxt name)
     (filter (λ(expr) (syntax-parse expr [(head:id _ ...) (free-identifier=? (compiled-from #'head) name)] [_ #f])) ctxt))
   (define (context-ref ctxt name) (define result (context-ref* ctxt name))
@@ -157,10 +165,14 @@
                   #:do [(define it (lookup #'head))]
                   #:fail-unless (object/s? it) (raise-syntax-error 'compile-rewrite-exprs (format "unrecognized object: ~a" (syntax->datum inner-expr)) inner-expr)
                   (void)])
+               (define inner-ctxt (or (get-id-ctxt inner-expr) '()))
+               (define maybe-id (if (context-ref inner-ctxt #'id) '() (list #`(#,put-id #,(gensym)))))
+               (define inner-ctxt* (append maybe-id inner-ctxt))
+               (define ctxt* (merge-coordinates (or (get-id-ctxt expr) '()) inner-ctxt*))
                (set-id-ctxt
                 inner-expr
                 ;; FIXME jagen gensym
-                (cons #`(#,put-id #,(gensym)) (or (get-id-ctxt expr) '())))))
+                (append  ctxt*))))
 
              (compile-rewrite-exprs (cdr exprs) (append ctxt coordinated))]
           [({~datum delete-by-id} the-id:id)
@@ -169,7 +181,8 @@
                 (λ(expr) 
                   (syntax-parse (context-ref (get-id-ctxt expr) #'id) 
                     [(_ the-id*:id) (not (free-identifier=? #'the-id #'the-id*))]
-                    [_ #t])) ctxt))
+                    [_ #t])) 
+                  ctxt))
             (compile-rewrite-exprs (cdr exprs) ctxt*)]
           [({~datum @} [coord ...] body ...)
            (define coords* (merge-coordinates (or (get-id-ctxt expr) '()) (syntax->list #'(coord ...))))

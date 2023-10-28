@@ -36,17 +36,20 @@
   (syntax-parser
     [_ 
      #:with (result ...)
-       (for/fold ([acc '()] #:result (reverse acc)) 
-                 ([expr (current-ctxt)])
-         (syntax-parse expr
-           [({~datum note} p a o)
-            (define semis
-              (match (syntax-e #'p)
-                ['c 0] ['d 2] ['e 4] ['f 5] ['g 7] ['a 9] ['b 11]))
-            (with-syntax ([midi-stx (quasisyntax/loc expr (midi #,(+ 61 semis (syntax-e #'a) (* 12 (- (syntax-e #'o) 4)))))])
-              (cons (delete-expr expr) (cons (ctxt->@ (get-id-ctxt expr) #'(put midi-stx)) acc)))]
-           [_ acc]))
-     (qq-art this-syntax (@ () result ...))]))
+       (begin
+       (define-values (exprs deletes)
+         (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2)))
+                   ([expr (current-ctxt)])
+           (syntax-parse expr
+             [({~datum note} p a o)
+              (define semis
+                (match (syntax-e #'p)
+                  ['c 0] ['d 2] ['e 4] ['f 5] ['g 7] ['a 9] ['b 11]))
+              (with-syntax ([midi-stx (quasisyntax/loc expr (midi #,(+ 61 semis (syntax-e #'a) (* 12 (- (syntax-e #'o) 4)))))])
+                (values (cons (qq-art expr (put midi-stx)) acc1) (cons (delete-expr expr) acc2)))]
+             [_ (values acc1 acc2)])))
+         (append deletes exprs))
+     #'(@ () result ...)]))
 
 
 (define-art-object (key [pitch accidental mode]))
@@ -57,19 +60,40 @@
   (syntax-parser
     [_ 
      #:with (result ...)
-       (for/fold ([acc '()] #:result (reverse acc)) 
-                 ([expr (current-ctxt)])
-         (syntax-parse expr
-           [({~datum ^} ix:number)
-            (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'key)
-              [({~datum key} pitch:id accidental:number mode:id)
-               (define octave 
-                 (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'octave)
-                   [(octave o:number) (syntax-e #'o)]))
-               (define scale (generate-scale (syntax->datum #'pitch) (syntax->datum #'accidental) (syntax->datum #'mode)))
-               (match-define (list p a) (list-ref scale (sub1 (syntax-e #'ix))))
-               (define c (index-where scale (λ (x) (eq? (car x) 'c))))
-               (define o (if (>= (sub1 (syntax-e #'ix)) c) octave (sub1 octave)))
-               (cons (delete-expr expr) (cons (ctxt->@ (get-id-ctxt expr) (qq-art expr (put (note #,p #,a #,o)))) acc))])]
-           [_ acc]))
-     (qq-art this-syntax (@ () result ...))]))
+       (begin
+         (define-values (exprs deletes)
+           (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2)))
+                     ([expr (current-ctxt)])
+             (syntax-parse expr
+               [({~datum ^} ix:number)
+                (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'key)
+                  [({~datum key} pitch:id accidental:number mode:id)
+                   (define octave 
+                     (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'octave)
+                       [(octave o:number) (syntax-e #'o)]))
+                   (define scale (generate-scale (syntax->datum #'pitch) (syntax->datum #'accidental) (syntax->datum #'mode)))
+                   (match-define (list p a) (list-ref scale (sub1 (syntax-e #'ix))))
+                   (define c (index-where scale (λ (x) (eq? (car x) 'c))))
+                   (define o (if (>= (sub1 (syntax-e #'ix)) c) octave (sub1 octave)))
+                   (values (cons (qq-art expr (put (note #,p #,a #,o))) acc1) (cons (delete-expr expr) acc2))])]
+               [_ (values acc1 acc2)])))
+         (append deletes exprs))
+     #'(@ () result ...)]))
+
+(define-art-object (transpose-diatonic []))
+(define-mapping-rewriter (run-transpose-diatonic [(: transposes transpose-diatonic)])
+  (syntax-parser
+    [(_ val:number) 
+     #:with (result ...)
+       (begin
+         (define-values (exprs deletes)
+           (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2)))
+                     ([expr (current-ctxt)])
+             (syntax-parse expr
+               [({~datum ^} ix:number)
+                (values (cons (qq-art expr (put (^ #,(add1 (modulo (sub1 (+ (syntax-e #'val) (syntax-e #'ix))) 8))))) acc1) (cons (delete-expr expr) acc2))]
+               [_ (values acc1 acc2)])))
+         (append deletes exprs))
+     #'(@ () result ...)]))
+
+(define-art-object (time-sig [n d]))

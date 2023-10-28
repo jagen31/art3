@@ -30,7 +30,7 @@
                       #`(let* ([expr* #,expr]
                                [sound (rs-scale 1 (cdr expr*))]
                                [silence+sound (if (zero? (car expr*)) sound (rs-append (silence (car expr*)) sound))])
-                          (rs-overlay (rs-scale 0.1 silence+sound) #,acc)))))
+                          (rs-overlay (rs-scale 0.05 silence+sound) #,acc)))))
          #`(rs-scale 4 #,result))))]))
 
 
@@ -70,7 +70,7 @@
    (open-input-file
     (build-path soundfont-path "Jeux14.sf2"))))
 
-#;(println (map preset-name (soundfont-presets jeux)))
+(println (map preset-name (soundfont-presets jeux)))
 
 (define-subperformer midi-subperformer
   (λ(ctxt)
