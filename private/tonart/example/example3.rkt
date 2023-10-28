@@ -355,15 +355,15 @@ That’s wonderful!
         (m@ [0 32 (tenors)] (instrument |Montre 8 Flute 4|))
 
         (m@ [0 32 (bass-trombone)] (instrument |Tromp. en chamade|))
-        (m@ [0 32 (bassoon-2)] (instrument |Quintadena8Viola4|))
+        (m@ [0 32 (bassoon-2)] (instrument |Voix Celeste 8|))
 
         (m@ [0 32 (tenor-trombone)] (instrument |Tromp. en chamade|))
-        (m@ [0 32 (bassoon-1)] (instrument |Quintadena8Viola4|))
+        (m@ [0 32 (bassoon-1)] (instrument |Voix Celeste 8|))
 
-        (m@ [0 32 (trumpet)] (instrument |Tromp. en chamade|))
+        (m@ [0 32 (trumpet)] (instrument |Quintadena8Viola4|))
         (m@ [0 32 (timpani)] (instrument |Cornemuse 8|))
 
-        (m@ [0 32 (strings)] (instrument |Voix Celeste 8|))
+        (m@ [0 32 (strings)] (instrument |Quintadena8Viola4|))
 
         <the-key>
         <the-time-sig>
