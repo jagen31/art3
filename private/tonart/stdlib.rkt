@@ -5,6 +5,8 @@
          (for-syntax syntax/parse))
 (provide (all-defined-out))
 
+(define-art-object (tempo [bpm]))
+
 (define-rewriter m@
   (λ (stx)
     (syntax-parse stx

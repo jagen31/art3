@@ -1,7 +1,7 @@
 #lang racket
 
 (require "core.rkt" syntax-spec (for-syntax syntax/parse racket/list (except-in ee-lib racket-var)))
-(provide (all-defined-out))
+(provide (all-defined-out) (for-syntax (all-defined-out)))
 
 ;;;;;;;;;;;; SOME GENERIC OBJECTS that may come in handy.
 

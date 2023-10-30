@@ -24,7 +24,7 @@
       (unless l (break #f))
       (syntax-parse #`(#,l #,r)
         [((_ item:id ...) (_ item*:id ...))
-         (free-id-subset? (immutable-free-id-set (syntax->list #'(item ...))) (immutable-free-id-set (syntax->list #'(item* ...))))]))))
+         (free-id-subset? (immutable-free-id-set (syntax->list #'(item* ...))) (immutable-free-id-set (syntax->list #'(item ...))))]))))
 
 (define-coordinate (subset [] merge-subset subset-within?))
 

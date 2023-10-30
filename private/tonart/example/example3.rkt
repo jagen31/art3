@@ -365,6 +365,7 @@ That’s wonderful!
 
         (m@ [0 32 (strings)] (instrument |Quintadena8Viola4|))
 
+        (i@ [0 48] (tempo 86))
         <the-key>
         <the-time-sig>
         <the-music>))

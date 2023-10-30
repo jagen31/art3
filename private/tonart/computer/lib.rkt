@@ -1,6 +1,7 @@
 #lang racket
 
-(require "../../common/core.rkt" "../../common/stdlib.rkt" "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" racket/runtime-path 
+(require "../../common/core.rkt" "../../common/stdlib.rkt" "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
+        "../stdlib.rkt" racket/runtime-path 
   (for-syntax syntax/parse racket/match racket/list) rsound rsound/envelope sf2-parser)
 (provide (all-defined-out))
 
@@ -39,8 +40,8 @@
 ;;;;;;; TONES - these are pretty easy to have a computer perform.
 (define-art-object (tone [freq]))
 ;; subperformer for performing tones from a context
-(define (get-duration start end)
-  (round (* (/ (- end start) 2) (default-sample-rate))))
+(define (get-duration start end tempo)
+  (round (* (/ (- end start) (/ tempo 60)) (default-sample-rate))))
 (define-subperformer tone-subperformer
   (λ(ctxt)
     (for/foldr ([acc '()])
@@ -50,9 +51,13 @@
 
          (define-values (start* end*) (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
            [({~datum interval} ({~datum start} val:number) ({~datum end} val2:number)) (values (syntax-e #'val) (syntax-e #'val2))]))
-         (cons #`(let ([duration (get-duration #,start* #,end*)]) 
-             (cons (round (* #,start* (/ (default-sample-rate) 2)))
-                   (rs-scale 2 (rs-mult (sine-window duration (floor (/ duration 4))) (make-tone freq 0.1 duration))))) acc)]
+         ;; FIXME jagen THIS ASSUMES UNIFORM TEMPO
+         (define tempo (context-ref/surrounding ctxt (get-id-ctxt stx) #'tempo))
+         (syntax-parse tempo
+           [({~datum tempo} tempo*:number)
+         (cons #`(let ([duration (get-duration #,start* #,end* tempo*)]) 
+             (cons (round (* #,start* (/ (default-sample-rate) (/ tempo* 60))))
+                   (rs-scale 2 (rs-mult (sine-window duration (floor (/ duration 4))) (make-tone freq 0.1 duration))))) acc)])]
         [_ acc]))))
 
 ;; MIDI- an alternative to sine waves
@@ -81,11 +86,14 @@
          (define-values (start* end*) (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
            [({~datum interval} ({~datum start} val:number) ({~datum end} val2:number)) (values (syntax-e #'val) (syntax-e #'val2))]))
          (define instrument (context-ref/surrounding ctxt (get-id-ctxt stx) #'instrument))
+         ;; FIXME jagen THIS ASSUMES UNIFORM TEMPO
+         (define tempo (context-ref/surrounding ctxt (get-id-ctxt stx) #'tempo))
          (unless instrument (raise-syntax-error 'midi-subperformer "no instrument in context for midi" stx))
-         (syntax-parse instrument
-           [({~datum instrument} name:id)
-            (cons #`(let ([duration (get-duration #,start* #,end*)]) 
-              (cons (round (* #,start* (/ (default-sample-rate) 2)))
+         (unless tempo (raise-syntax-error 'midi-subperformer "no tempo in context for midi" stx))
+         (syntax-parse #`(#,instrument #,tempo)
+           [(({~datum instrument} name:id) ({~datum tempo} tempo*:number))
+            (cons #`(let ([duration (get-duration #,start* #,end* tempo*)]) 
+              (cons (round (* #,start* (/ (default-sample-rate) (/ tempo* 60))))
                     (preset-midi->rsound (load-preset jeux (symbol->string (syntax->datum #'name))) (syntax-e #'num) duration))) acc)])]
         [_ acc]))))
 

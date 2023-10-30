@@ -32,19 +32,19 @@ immediately upon concluding this README.)
 #### Humans
 
 Performance, on the other hand, is directly interpreting the expressions within
-the coordinate system.  For example, a soprano sings an A in the 5th octave
-after seeing `(note a 0 5)` @ `(interval (start 0) (end 4))` `(voice soprano)`.
-Or, a soprano sings an A in the 5th octave after seeing {`(key d major)`, `(^ 5)` @ 
-`(interval (start 0) (end 4))` `(voice soprano)`, `(octave 6)` @
-`(interval (start 0) (end 32))` `(voice soprano)`} (N.B. she is probably reading
-a score representation of these, not reading them from a markdown file!  Also,
-the `(octave 6)` because `octave` defines where the C is in the scale.)
-Frequently, unless you are dealing with wildly gifted musicians or just having
-some fun, you'll use meaning preserving rewrites to turn the second score into
-the first one.  But the idea is at any point within a chain of meaning
-preserving rewrites, the rewriting can STOP and an attempt to perform the art
-can immediately be made, which, provided it is performed properly, will result
-in two thumbs up from the artist.
+the coordinate system.  No changes are made to the art.  For example, a soprano
+sings an A in the 5th octave after seeing `(note a 0 5)` @ `(interval (start 0)
+(end 4))` `(voice soprano)`.  Or, a soprano sings an A in the 5th octave after
+seeing {`(key d major)`, `(^ 5)` @ `(interval (start 0) (end 4))` `(voice
+soprano)`, `(octave 6)` @ `(interval (start 0) (end 32))` `(voice soprano)`}
+(N.B. she is probably reading a score representation of these, not reading them
+from a markdown file!  Also, the `(octave 6)` because `octave` defines where the
+C is in the scale.) Frequently, unless you are dealing with wildly gifted
+musicians or just having some fun, you'll use meaning preserving rewrites to
+turn the second score into the first one.  But the idea is at any point within a
+chain of meaning preserving rewrites, the rewriting can STOP and an attempt to
+perform the art can immediately be made, which, provided it is performed
+properly, will result in two thumbs up from the artist.
 
 (N.B. now, this is not true if the composer says that `(note a 0 5)` is the
 ACTUAL composition and the `(key d major)` so on so forth stuff was just
