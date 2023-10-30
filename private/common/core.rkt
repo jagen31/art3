@@ -105,12 +105,14 @@
 
   ;; find an element in the context of type name, which contains the given coords
   (define (context-ref/surrounding ctxt coords name)
-    (findf (λ(expr) (syntax-parse expr 
+    (define candidates
+      (filter (λ(expr) (syntax-parse expr 
         [(head:id _ ...) 
          (and (free-identifier=? (compiled-from #'head) name)
-              (within? coords (get-id-ctxt expr)))] 
-        [_ #f])) 
+              (context-within? coords (get-id-ctxt expr)))] 
+        [_ #f]))
       ctxt))
+    (and (not (empty? candidates)) (car (sort candidates within?))))
 
 
   ;;;;;;;;;; COORDINATE THINGS
@@ -133,25 +135,31 @@
           [_ acc])))
     coords)
 
-    (define (within? ctxt-l ctxt-r)
+    ;; FIXME jagen yikes
+    (define (within? l r)
+      (syntax-parse l
+        [(head:id _ ...)
+         #:when (lookup #'head object/s?)
+           #t]
+        [(head:id _ ...)
+         #:when (lookup #'head coordinate/s?)
+         ((coordinate/s-within? (lookup #'head)) l r)]))
+
+    (define (context-within? ctxt-l ctxt-r)
       (for/and ([inner-coord ctxt-l])
         (syntax-parse inner-coord
           [(head:id _ ...)
-           #:when (lookup #'head object/s?)
-           #t]
-          [(head:id _ ...)
-           #:when (lookup #'head coordinate/s?)
-           ((coordinate/s-within? (lookup #'head)) inner-coord (context-ref ctxt-r (compiled-from #'head)))]))))
+           (within? inner-coord (context-ref ctxt-r (compiled-from #'head)))])))
 
 
   ;; utility function to generate a `delete-by-id` instruction for an expr
-  (define-for-syntax (delete-expr stx)
+  (define (delete-expr stx)
     (with-syntax ([id (syntax-parse (context-ref (get-id-ctxt stx) #'id) [({~datum id} the-id:id) #'the-id])])
       (qq-art stx (delete-by-id id))))
 
 
-  (define-for-syntax put-id (compile-reference #'id))
-  (define-for-syntax (compile-rewrite-exprs exprs ctxt)
+  (define put-id (compile-reference #'id))
+  (define (compile-rewrite-exprs exprs ctxt)
     (cond
       [(null? exprs) ctxt]
       [else 
@@ -202,4 +210,4 @@
            (define realized (parameterize ([current-ctxt ctxt]) ((rewriter/s-body (lookup #'realizer)) expr)))
            (compile-rewrite-exprs (cons realized (cdr exprs)) ctxt)]
           [(unknown:id arg ...)
-           (raise-syntax-error 'compile-rewrite-exprs (format "unknown rewriter: ~a" (syntax->datum expr)) expr)])]))
+           (raise-syntax-error 'compile-rewrite-exprs (format "unknown rewriter: ~a" (syntax->datum expr)) expr)])])))

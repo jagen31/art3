@@ -66,15 +66,21 @@
                      ([expr (current-ctxt)])
              (syntax-parse expr
                [({~datum ^} ix:number)
+                (println (un-@ expr))
+                (println (map un-@ (context-ref* (current-ctxt) #'key)))
                 (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'key)
                   [({~datum key} pitch:id accidental:number mode:id)
                    (define octave 
                      (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'octave)
                        [(octave o:number) (syntax-e #'o)]))
+
                    (define scale (generate-scale (syntax->datum #'pitch) (syntax->datum #'accidental) (syntax->datum #'mode)))
-                   (match-define (list p a) (list-ref scale (sub1 (syntax-e #'ix))))
+                   (define ix* (sub1 (syntax-e #'ix)))
+                   (match-define (list p a) (list-ref scale (modulo ix* 7)))
+
                    (define c (index-where scale (λ (x) (eq? (car x) 'c))))
-                   (define o (if (>= (sub1 (syntax-e #'ix)) c) octave (sub1 octave)))
+                   (define o (+ octave (floor (/ (- ix* c) 7))))
+
                    (values (cons (qq-art expr (put (note #,p #,a #,o))) acc1) (cons (delete-expr expr) acc2))])]
                [_ (values acc1 acc2)])))
          (append deletes exprs))
@@ -97,3 +103,4 @@
      #'(@ () result ...)]))
 
 (define-art-object (time-sig [n d]))
+(define-art-object (dynamic [level]))

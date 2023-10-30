@@ -41,7 +41,7 @@
        (define coords (syntax->list #'(ss* ...)))
        (define target
          (filter 
-           (λ(expr) (within? (get-id-ctxt expr) (get-id-ctxt stx)))
+           (λ(expr) (context-within? (get-id-ctxt expr) (get-id-ctxt stx)))
            (current-ctxt)))
        (with-syntax ([(target* ...)
          (for/list ([item target])

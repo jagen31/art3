@@ -102,7 +102,7 @@
             (append
               (for/list ([melody melodies]) (delete-expr melody))
               (for/list ([melody melodies]) 
-                (parameterize ([current-ctxt (filter (λ(expr) (within? (get-id-ctxt expr) (get-id-ctxt melody))) (current-ctxt))])
+                (parameterize ([current-ctxt (filter (λ(expr) (context-within? (get-id-ctxt expr) (get-id-ctxt melody))) (current-ctxt))])
                   (body melody))))])
             #'(@ () result (... ...)))))]))
 
@@ -116,3 +116,22 @@
           (syntax-parse obj
             [_
              (qq-art obj (@ () body ...))]))))]))
+
+;; delete by name
+(define-rewriter delete
+  (λ (stx)
+    (syntax-parse stx
+      [(_ name:id)
+       (define target
+         (filter 
+           (λ (expr) 
+             (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx))
+                  (syntax-parse expr
+                    [(head:id _ ...) (free-identifier=? (compiled-from #'head) #'name)])))
+           (current-ctxt)))
+       (with-syntax ([(target* ...)
+         (for/list ([item target])
+           ;; FIXME jagen preserve orthogonality?
+           (delete-expr item))])
+         #`(@ () target* ...))])))
+

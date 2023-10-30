@@ -53,8 +53,8 @@ So now — A minor. Suddenly.
 
 Salieri writes the key signature.
 
-@chunk[<the-key>
-  (i@ [0 32] (key a 0 minor))
+@chunk[<the-header>
+  (i@ [0 48] (key a 0 minor))
 ]
 
 MOZART
@@ -66,8 +66,8 @@ What time?
 MOZART
 Common time.
 
-@chunk[<the-time-sig>
-  (i@ [0 32] (time-sig 4 4))
+@chunk[<the-header>
+  (i@ [0 48] (time-sig 4 4))
 ]
 
 Salieri writes this, and continues now to write as swiftly
@@ -86,7 +86,7 @@ Con-fu-ta-tis.
   (define-simple-rewriter confutatis-rhythm expand-confutatis
     (rhythm 0.75 0.25 1 1))]
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [1 4 (basses)]
     (confutatis-rhythm)
     (seq (note a 0 3) (note e 0 3) (note c 0 4) (note a 0 3)))
@@ -97,7 +97,7 @@ Second measure, second beat.
 (singing)
 Ma-le-dic-tis.
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [5 8 (basses)]
     (confutatis-rhythm)
     (seq (note b 0 3) (note e 0 3) (note d 0 4) (note g 1 3)))]
@@ -118,7 +118,7 @@ Flam-mis a-cri-bus ad-dic-tis.
   (define-simple-rewriter flammis-rhythm expand-flammis
     (rhythm 0.75 0.25 0.75 0.25 0.75 0.25 1 1))]
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [9 14 (basses)]
     (flammis-rhythm)
     (seq (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 0 3) (note f 0 3) (note d 0 3)))]
@@ -129,7 +129,7 @@ And fourth measure, fourth beat — D.
 Ma-le-dic-tis, flam-mis a-cri-bus ad-
 dic-tis.
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [15 24 (basses)]
     (-- 0 [2 (rhythm 0.75 0.25 0.75 0.25)] 
           [5 (flammis-rhythm)])
@@ -157,7 +157,7 @@ the first measure — C.
 (singing)
 Con-fu-ta-tis.
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [3 6 (tenors)]
     (confutatis-rhythm)
     (seq (note c 0 4) (note a 0 3) (note d 0 4) (note g 1 3)))
@@ -168,7 +168,7 @@ Second measure, fourth beat on D.
 (singing)
 Ma-le-dic-tis.
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [7 10 (tenors)]
     (confutatis-rhythm)
     (seq (note d 0 4) (note b 0 3) (note e 0 4) (note a 0 3)))
@@ -187,7 +187,7 @@ Flam-mis a-cri-bus ad-dic-tis, flam-
 mis a-cri-bus ad-dic-tis.
 
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [13 23 (tenors)]
     (-- 0 [4 (rhythm 0.75 0.25 0.75 0.25 0.75 0.25 0.75 0.25)] [5 (flammis-rhythm)])
     (-- 0 [4 (seq (note f 0 4) (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 1 3) (note e 0 3))]
@@ -209,7 +209,7 @@ Identical notes and rhythm.
 the opening notes of
 the bass vocal line)
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [0 24 (basses)] 
     (copy-to (bassoon-2))
     (copy-to (bass-trombone)))]
@@ -237,7 +237,7 @@ With the tenors.
 SALIERI
 Also identical?
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (m@ [0 24 (tenors)] 
     (copy-to (bassoon-1))
     (copy-to (tenor-trombone)))]
@@ -247,7 +247,7 @@ Exactly. The instruments to go with
 the voices. Trumpets and timpani,
 tonic and dominant.
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (ss@ (trumpet)
     (-- 0 [1 (^ 1)] [1] [1 (^ 1)] [1] 
           [1 (^ 4)] [1] [1 (^ 4)] [1]
@@ -283,7 +283,7 @@ like this.
 
 He sings the urgent first measure of the ostinato.
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (ss@ (strings)
     (i@ [0 24] (octave 4))
 
@@ -318,13 +318,13 @@ the next measures exactly the same,
 rising and rising — C to D to E, up
 to the dominant chord. Do you see?
 
-@chunk[<the-music>
+@chunk[<the-confutatis>
   (ss@ (strings)
     (-- 0 [4] [4 (transpose-diatonic 1)] [4 (transpose-diatonic 2)] [4 (transpose-diatonic 3)])
     
     (-- 16 [1 (seq (^ 5) (^ 7) (^ 2) (^ 2) (^ 2))] [1 (seq (^ 2) (^ 7) (^ 5) (^ 5) (^ 5))] 
            [1 (seq (^ 5) (^ 1) (^ 3) (^ 3) (^ 3))] [1 (seq (^ 3) (^ 1) (^ 5) (^ 5) (^ 5))]
-           [1 (^ 5)] [1 (^ 5)]))]
+           [0.5 (^ 5)] [0.5 (^ 5)]))]
 
 As Salieri writes, Mozart sings the ostinato from the
 beginning, but the unaccompanied strings overwhelm his voice
@@ -334,8 +334,134 @@ agitated accompaniment. They stop.
 SALIERI
 That’s wonderful!
 
-@chunk[<the-music>
-  (i@ [0 24] (expand-confutatis) (expand-flammis) (expand-repeat) (apply-rhythm) (run-transpose-diatonic) (^->note) (note->midi))]
+MOZART
+Yes, yes - go on. The Voca Me. 
+Suddenly sotto voce. Write that down: 
+sotto voce, pianissimo. Voca me cum 
+benedictis. Call me among the blessed.
+
+@chunk[<the-voca> 
+  (i@ [0 32] (dynamic pp))]
+
+He is now sitting bolt upright, hushed and inspired.
+
+MOZART
+C Major. Sopranos and altos in thirds.  
+Altos on C. Sopranos above.
+(singing the alto 
+part)
+Vo-ca, vo-ca me, vo-ca me cum be-ne-
+dic-tis.
+
+@chunk[<the-voca>
+  (i@ [0 15]
+    (ss@ (altos)
+      (key c 0 major)
+      (rhythm 3.5 0.5 1.5 0.5 2 1.5 0.5 0.5 0.5 0.5 0.5 2 1)
+      (octave 5)
+      (seq (^ 1) (^ 1) (^ 2) (^ 2) (^ 1) 
+           (^ 1) (^ 1) (^ 1) (^ 1) (^ 1) (^ 1) (^ 2) (^ 1)))
+      (copy-to (sopranos))
+
+    ;; small correction
+    ;; FIXME jagen develop a better interface for this?
+    (ss@ (altos) 
+      (i@ [4 6] (delete ^) (-- 0 [1 (^ 1)] [1 (^ 0)]))
+      (i@ [12 14] (delete ^) (-- 0 [1 (^ 1)] [1 (^ 0)])))
+    (ss@ (sopranos) (transpose-diatonic 2)))]
+  
+
+SALIERI
+Sopranos up to F on the second 'Voca'?
+
+MOZART
+Yes, and on 'dictis'.
+
+SALIERI
+Yes!
+
+He writes feverishly.
+
+MOZART
+And underneath, just violins - 
+arpeggio.
+
+He sings the violin figure under the Voca Me (Bars 7,8,9).
+
+@chunk[<the-definitions>
+  (define-simple-rewriter voca-ostinato expand-voca-ostinato
+    (rhythm 0.5 0.25 0.25 0.5 0.5 0.5 0.5 0.5 0.5 0.5 0.25 0.25 0.5 0.5 0.5))
+    
+  (define-simple-rewriter voca-ostinato-^ expand-voca-ostinato-^
+    (seq (^ 1) (^ 3) (^ 5) (^ 8) (^ 7) (^ 6) (^ 5) (^ 4) (^ 3) (^ 2) (^ 3) (^ 4) (^ 5) (^ -2) (^ 1)))]
+
+@chunk[<the-voca>
+  (m@ [0 15 (strings)]
+    (key c 0 major)
+    (octave 4)
+    (-- 0 [6.5 (voca-ostinato)] [1.5 (rhythm 0.25 0.25 0.5 0.25 0.25)] [6.5 (voca-ostinato)])
+    (-- 0 [6.5 (voca-ostinato-^)] [1.5 (seq (^ 3) (^ 5) (^ 8) (^ 5) (^ 3))] [6.5 (voca-ostinato-^)]))]
+
+MOZART
+(speaking)
+The descending scale in eighth notes, 
+and then back suddenly to the fire 
+again.
+
+He sings the ostinato phrase twice.
+
+MOZART
+(speaking)
+And that's it. Do you have it?
+
+SALIERI
+You go fast!
+
+MOZART
+(urgently)
+Do you have it?
+
+SALIERI
+Yes.
+
+MOZART
+Then let me hear it. All of it. The 
+whole thing from the beginning - 
+now!
+
+The entire Confutatis bursts over the room, as Mozart snatches 
+the manuscript pages from Salieri and reads from it, singing. 
+Salieri sits looking on in wondering astonishment. The music 
+continues right through the following scenes, to the end of 
+the movement.
+
+@chunk[<the-footer>
+  (-- 0 [24 (expand-confutatis) (expand-flammis) (expand-repeat) (apply-rhythm) 
+            (run-transpose-diatonic) (^->note) (note->midi)]
+        [15 (expand-voca-ostinato) (expand-voca-ostinato-^) (apply-rhythm) (run-transpose-diatonic) (^->note) (note->midi)])]
+
+
+@chunk[<the-header>
+  (m@ [0 48 (sopranos)] (instrument |Montre 8 Flute 4|))
+  (m@ [0 48 (altos)] (instrument |Montre 8 Flute 4|))
+  (m@ [0 48 (tenors)] (instrument |Montre 8 Flute 4|))
+  (m@ [0 48 (basses)] (instrument |Montre 8 Flute 4|))
+
+  (m@ [0 48 (bass-trombone)] (instrument |Tromp. en chamade|))
+  (m@ [0 48 (bassoon-2)] (instrument |Voix Celeste 8|))
+
+  (m@ [0 48 (tenor-trombone)] (instrument |Tromp. en chamade|))
+  (m@ [0 48 (bassoon-1)] (instrument |Voix Celeste 8|))
+
+  (m@ [0 48 (trumpet)] (instrument |Quintadena8Viola4|))
+  (m@ [0 48 (timpani)] (instrument |Cornemuse 8|))
+
+  (m@ [0 48 (strings)] (instrument |Quintadena8Viola4|))
+
+  (i@ [0 48] (tempo 86))
+]
+
+
 
 @chunk[<*>
   (require "../../common/core.rkt" "../../common/stdlib.rkt" 
@@ -350,25 +476,9 @@ That’s wonderful!
   
     (define sound 
       (perform music-rsound-performer 
-
-        (m@ [0 32 (basses)] (instrument |Montre 8 Flute 4|))
-        (m@ [0 32 (tenors)] (instrument |Montre 8 Flute 4|))
-
-        (m@ [0 32 (bass-trombone)] (instrument |Tromp. en chamade|))
-        (m@ [0 32 (bassoon-2)] (instrument |Voix Celeste 8|))
-
-        (m@ [0 32 (tenor-trombone)] (instrument |Tromp. en chamade|))
-        (m@ [0 32 (bassoon-1)] (instrument |Voix Celeste 8|))
-
-        (m@ [0 32 (trumpet)] (instrument |Quintadena8Viola4|))
-        (m@ [0 32 (timpani)] (instrument |Cornemuse 8|))
-
-        (m@ [0 32 (strings)] (instrument |Quintadena8Viola4|))
-
-        (i@ [0 48] (tempo 86))
-        <the-key>
-        <the-time-sig>
-        <the-music>))
+       <the-header> 
+       (-- 0 [24 <the-confutatis>] [15 <the-voca>])
+       <the-footer>))
         
     (play sound)
     (rs-write sound "confutatis.wav")]
