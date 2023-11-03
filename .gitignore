@@ -8,6 +8,7 @@ doc/
 **.rktd
 **.sxref
 
-**/soundfont/*
+**/sf2/*
+**/sfz/*
 
 .DS_Store

@@ -2,8 +2,10 @@
 
 (require "../../common/core.rkt" "../../common/stdlib.rkt" 
          "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
-         "../stdlib.rkt" "../common-practice/lib.rkt"
-         "../computer/lib.rkt" "../organ/hymn.rkt"
+         "../rewriter/stdlib.rkt" "../rewriter/common-practice/lib.rkt"
+         "../rewriter/church/hymn.rkt"
+         "../realizer/electronic/lib.rkt"
+         "../realizer/electronic/rsound/lib.rkt"
   rsound (for-syntax syntax/parse))
 (set-output-device! 1)
 

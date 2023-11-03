@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../core.rkt" "../stdlib.rkt" (for-syntax syntax/parse racket/list))
+(require "../core.rkt" (for-syntax syntax/parse racket/list))
 (provide (all-defined-out))
 
 ;;;;;;;;;;; INTERVAL COORDINATE THINGS
@@ -39,70 +39,4 @@
          (define-values (s1 e1 s2 e2) (values (syntax-e #'s1*) (syntax-e #'e1*) (syntax-e #'s2*) (syntax-e #'e2*)))
          (and (>= s1 s2) (<= e1 e2))]))))
 
-
-
 (define-coordinate (interval [start end] merge-interval interval-within?))
-
-(define-rewriter i@
-  (λ(stx)
-    (syntax-parse stx
-      [(_ [start* end*] expr ...)
-       (qq-art stx (@ [(interval (start start*) (end end*))] expr ...))])))
-
-(define-rewriter --
-  (λ(stx)
-    (syntax-parse stx
-      [(_ start* {~and box [len:number expr ...]} ...)
-       #:with (result ...)
-         (for/fold ([acc '()] [t (syntax-e #'start*)] #:result (reverse acc))
-                   ([box (syntax->list #'(box ...))] [l (syntax->list #'(len ...))] [e (syntax->list #'((expr ...) ...))])
-           (values (cons #`(i@ [#,t #,(+ t (syntax-e l))] #,@e) acc) (+ t (syntax-e l))))
-       (qq-art this-syntax (@ () result ...))])))
-
-(define-art-object (repeat []))
-
-(define-mapping-rewriter (expand-repeat [(: repeats repeat)])
-  (λ (repeat)
-    (syntax-parse repeat
-      [(_ size*:number expr ...)
-       #:do [
-        (define size (syntax-e #'size*))
-        (define-values (the-start the-end) (syntax-parse (context-ref (get-id-ctxt repeat) #'interval) 
-          [({~datum interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
-       ]
-       #:with (result ...)
-         (for/list ([i (in-range 0 (- the-end the-start) size)])
-           #`[#,size expr ...])
-       (qq-art this-syntax (-- 0 result ...))]
-      [_ (error 'expand-repeat "oops")])))
-  
-
-(define-rewriter translate
-  (syntax-parser
-    [(_ value:number)
-     #:with (result ...) (for/foldr ([acc '()]) 
-                ([expr (current-ctxt)])
-       (define-values (the-start the-end) (syntax-parse (context-ref (get-id-ctxt expr) #'interval) [({~datum interval} ({~datum start} s) ({~datum end} e)) (values #'s #'e)]))
-       (cons (delete-expr expr)
-         (cons (qq-art expr 
-           ;; FIXME jagen
-           (@ [(interval (start value) (end +inf.0))] 
-             (@ [#,@(get-id-ctxt expr)] (put #,expr)))) acc)))
-     (qq-art this-syntax (@ () result ...))]))
-
-(define-art-object (rhythm []))
-
-(define-mapping-rewriter (apply-rhythm [(: rhythms rhythm)])
-  (λ (r)
-    (syntax-parse r
-      [(_ expr:number ...)
-       ;; FIXME copy id ctxt
-       #:with (result ...)
-         (for/list ([e (syntax->list #'(expr ...))] [i (in-naturals)])
-           #`[#,e (! #,i)])
-
-       (qq-art this-syntax
-          (@ ()
-            (-- 0 result ...)
-            ;; FIXME jagen TOTALLY UNSAFE (this will seq-ref in the surrounding context :'( )
-            (seq-ref)))])))

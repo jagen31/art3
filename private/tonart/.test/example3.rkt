@@ -429,56 +429,63 @@ Then let me hear it. All of it. The
 whole thing from the beginning - 
 now!
 
-The entire Confutatis bursts over the room, as Mozart snatches 
-the manuscript pages from Salieri and reads from it, singing. 
-Salieri sits looking on in wondering astonishment. The music 
-continues right through the following scenes, to the end of 
-the movement.
-
-@chunk[<the-footer>
-  (-- 0 [24 (expand-confutatis) (expand-flammis) (expand-repeat) (apply-rhythm) 
-            (run-transpose-diatonic) (^->note) (note->midi)]
-        [15 (expand-voca-ostinato) (expand-voca-ostinato-^) (apply-rhythm) (run-transpose-diatonic) (^->note) (note->midi)])]
-
 
 @chunk[<the-header>
-  (m@ [0 48 (sopranos)] (instrument |Montre 8 Flute 4|))
-  (m@ [0 48 (altos)] (instrument |Montre 8 Flute 4|))
-  (m@ [0 48 (tenors)] (instrument |Montre 8 Flute 4|))
-  (m@ [0 48 (basses)] (instrument |Montre 8 Flute 4|))
 
-  (m@ [0 48 (bass-trombone)] (instrument |Tromp. en chamade|))
-  (m@ [0 48 (bassoon-2)] (instrument |Voix Celeste 8|))
+  (i@ [0 100]
+    (instrument-map
+      [voice . 000/000_Montre_8]
+      [trombone . 001/052_Tromp._en_chamade] ;; >_<>_<>_<<<<<< Owwwww
+      [bassoon . 001/055_Voix_Celeste_8]
+      [trumpet . 000/069_Quintadena8Viola4]
+      [timpani . 000/073_Cornemuse_8]
+      [strings . 000/069_Quintadena8Viola4]))
 
-  (m@ [0 48 (tenor-trombone)] (instrument |Tromp. en chamade|))
-  (m@ [0 48 (bassoon-1)] (instrument |Voix Celeste 8|))
+  (m@ [0 48 (sopranos)] (instrument voice))
+  (m@ [0 48 (altos)] (instrument voice))
+  (m@ [0 48 (tenors)] (instrument voice))
+  (m@ [0 48 (basses)] (instrument voice))
 
-  (m@ [0 48 (trumpet)] (instrument |Quintadena8Viola4|))
-  (m@ [0 48 (timpani)] (instrument |Cornemuse 8|))
+  (m@ [0 48 (bass-trombone)] (instrument trombone))
+  (m@ [0 48 (bassoon-2)] (instrument bassoon))
 
-  (m@ [0 48 (strings)] (instrument |Quintadena8Viola4|))
+  (m@ [0 48 (tenor-trombone)] (instrument trombone))
+  (m@ [0 48 (bassoon-1)] (instrument bassoon))
+
+  (m@ [0 48 (trumpet)] (instrument trumpet))
+  (m@ [0 48 (timpani)] (instrument timpani))
+
+  (m@ [0 48 (strings)] (instrument strings))
 
   (i@ [0 48] (tempo 86))
 ]
 
+@chunk[<the-footer>
+  (i@ [0 100] 
+    (expand-confutatis) (expand-flammis) (expand-voca-ostinato) (expand-voca-ostinato-^) ; expand the vars
+    (expand-repeat) (apply-rhythm) ; repeats and rhythms
+    (run-transpose-diatonic) (^->note) ; working with scale degrees
+    (note->midi) (d/dt) ; ready to render
+    )]
 
 
 @chunk[<*>
   (require "../../common/core.rkt" "../../common/stdlib.rkt" 
          "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
-         "../stdlib.rkt" 
-         "../common-practice/lib.rkt"
-         "../computer/lib.rkt" "../organ/hymn.rkt"
-  rsound)
-  (set-output-device! 1)
+         "../rewriter/stdlib.rkt" 
+         "../rewriter/common-practice/lib.rkt"
+         "../realizer/electronic/lib.rkt" 
+         "../realizer/electronic/linuxsampler/lib.rkt")
 
   <the-definitions>
   
     (define sound 
-      (perform music-rsound-performer 
+      (perform linuxsampler-performer
        <the-header> 
        (-- 0 [24 <the-confutatis>] [15 <the-voca>])
        <the-footer>))
         
-    (play sound)
-    (rs-write sound "confutatis.wav")]
+    (define file (open-output-file "private/tonart/realizer/electronic/linuxsampler/.test/test.cpp" 
+                                   #:exists 'replace))
+    (displayln sound file)
+    (close-output-port file)]

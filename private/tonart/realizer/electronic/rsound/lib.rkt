@@ -1,9 +1,18 @@
 #lang racket
 
-(require "../../common/core.rkt" "../../common/stdlib.rkt" "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
-        "../stdlib.rkt" racket/runtime-path 
-  (for-syntax syntax/parse racket/match racket/list) rsound rsound/envelope sf2-parser)
+(require "../../../../common/core.rkt" "../../../../common/stdlib.rkt" 
+         "../../../../common/coordinate/interval.rkt" "../../../../common/coordinate/subset.rkt" 
+         "../../../../common/coordinate/instant.rkt" "../../../../common/coordinate/switch.rkt" 
+         "../../../rewriter/stdlib.rkt" "../lib.rkt" racket/runtime-path
+  (for-syntax syntax/parse racket/match racket/list racket/string racket/dict) rsound rsound/envelope sf2-parser)
 (provide (all-defined-out))
+
+;; load fluid by default
+(define-runtime-path soundfont-path "../resources/sf2")
+(define fluid
+  (parse-soundfont
+   (open-input-file
+    (build-path soundfont-path "FluidR3_GM.sf2"))))
 
 ;;;;;;;;;; PERFORMER FAMILIES- use other performers to stream/make a sound.
 ;; stream directly to pstream
@@ -34,11 +43,6 @@
                           (rs-overlay (rs-scale 0.05 silence+sound) #,acc)))))
          #`(rs-scale 4 #,result))))]))
 
-
-
-
-;;;;;;; TONES - these are pretty easy to have a computer perform.
-(define-art-object (tone [freq]))
 ;; subperformer for performing tones from a context
 (define (get-duration start end tempo)
   (round (* (/ (- end start) (/ tempo 60)) (default-sample-rate))))
@@ -60,23 +64,6 @@
                    (rs-scale 2 (rs-mult (sine-window duration (floor (/ duration 4))) (make-tone freq 0.1 duration))))) acc)])]
         [_ acc]))))
 
-;; MIDI- an alternative to sine waves
-(define-art-object (midi [num]))
-(define-art-object (instrument [name]))
-
-(define-runtime-path soundfont-path "soundfont")
-(define fluid
-  (parse-soundfont
-   (open-input-file
-    (build-path soundfont-path "FluidR3_GM.sf2"))))
-
-(define jeux
-  (parse-soundfont
-   (open-input-file
-    (build-path soundfont-path "Jeux14.sf2"))))
-
-(println (map preset-name (soundfont-presets jeux)))
-
 (define-subperformer midi-subperformer
   (λ(ctxt)
     (for/foldr ([acc '()])
@@ -94,9 +81,8 @@
            [(({~datum instrument} name:id) ({~datum tempo} tempo*:number))
             (cons #`(let ([duration (get-duration #,start* #,end* tempo*)]) 
               (cons (round (* #,start* (/ (default-sample-rate) (/ tempo* 60))))
-                    (preset-midi->rsound (load-preset jeux (symbol->string (syntax->datum #'name))) (syntax-e #'num) duration))) acc)])]
+                    (preset-midi->rsound (load-preset fluid(symbol->string (syntax->datum #'name))) (syntax-e #'num) duration))) acc)])]
         [_ acc]))))
-
 
 (define-composite-pstream-performer music-pstream-performer {tone-subperformer midi-subperformer})
 (define-composite-rsound-performer music-rsound-performer {tone-subperformer midi-subperformer})

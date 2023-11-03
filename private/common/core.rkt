@@ -91,13 +91,8 @@
     (with-syntax ([(ctxt* ...) ctxt] [expr* expr]) (qq-art expr (@ [ctxt* ...] expr*))))
   (define (get-id-ctxt stx) (syntax-property stx id-ctxt-prop))
   (define (set-id-ctxt stx ctxt) (syntax-property stx id-ctxt-prop ctxt))
-  (define (put-in-id-ctxt stx k v) (syntax-property stx id-ctxt-prop 
-    (for/list ([prop (get-id-ctxt stx)])
-      (syntax-parse prop
-        [(head:id _ ...)
-         #:when (free-identifier=? (compiled-from #'head) k)
-         (qq-art k (#,k #,@v))]
-        [_ prop]))))
+  (define (add-to-id-ctxt stx expr) (syntax-property stx id-ctxt-prop (cons expr (syntax-property stx id-ctxt-prop))))
+
   (define (context-ref* ctxt name)
     (filter (λ(expr) (syntax-parse expr [(head:id _ ...) (free-identifier=? (compiled-from #'head) name)] [_ #f])) ctxt))
   (define (context-ref ctxt name) (define result (context-ref* ctxt name))
@@ -113,6 +108,17 @@
         [_ #f]))
       ctxt))
     (and (not (empty? candidates)) (car (sort candidates within?))))
+
+  (define (remove-from-id-ctxt stx k) (syntax-property stx id-ctxt-prop 
+    (for/foldr ([acc '()]) 
+               ([prop (get-id-ctxt stx)])
+      (syntax-parse prop
+        [(head:id _ ...)
+         #:when (free-identifier=? (compiled-from #'head) k)
+         acc]
+        [_ (cons prop acc)]))))
+
+  (define (put-in-id-ctxt stx k v) (add-to-id-ctxt (remove-from-id-ctxt stx k) (qq-art k (#,k #,@v))))
 
 
   ;;;;;;;;;; COORDINATE THINGS
@@ -156,6 +162,10 @@
   (define (delete-expr stx)
     (with-syntax ([id (syntax-parse (context-ref (get-id-ctxt stx) #'id) [({~datum id} the-id:id) #'the-id])])
       (qq-art stx (delete-by-id id))))
+
+
+
+  (define (un-@ expr) #`(@ [#,@(get-id-ctxt expr)] #,expr))
 
 
   (define put-id (compile-reference #'id))
@@ -204,7 +214,8 @@
            (compile-rewrite-exprs (cdr exprs) (append ctxt evald))]
           [(object:id arg ...)
            #:when (lookup #'object object/s?)
-           (compile-rewrite-exprs (cons (qq-art expr (put #,expr)) (cdr exprs)) ctxt)]
+           #:with expr* expr
+           (compile-rewrite-exprs (cons #'(put expr*) (cdr exprs)) ctxt)]
           [(realizer:id arg ...)
            #:when (lookup #'realizer rewriter/s?)
            (define realized (parameterize ([current-ctxt ctxt]) ((rewriter/s-body (lookup #'realizer)) expr)))

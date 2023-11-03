@@ -1,7 +1,7 @@
 #lang racket
 
-(require "../../common/core.rkt" "../../common/stdlib.rkt" "../../common/coordinate/interval.rkt" 
-         "../computer/lib.rkt"
+(require "../../../common/core.rkt" "../../../common/stdlib.rkt" "../../../common/coordinate/interval.rkt" 
+         "../../realizer/electronic/lib.rkt"
          (for-syntax syntax/parse racket/match racket/list "tonality.rkt"))
 (provide (all-defined-out))
 
@@ -66,8 +66,6 @@
                      ([expr (current-ctxt)])
              (syntax-parse expr
                [({~datum ^} ix:number)
-                (println (un-@ expr))
-                (println (map un-@ (context-ref* (current-ctxt) #'key)))
                 (syntax-parse (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'key)
                   [({~datum key} pitch:id accidental:number mode:id)
                    (define octave 
