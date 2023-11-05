@@ -243,6 +243,31 @@
             ;; FIXME jagen TOTALLY UNSAFE (this will seq-ref in the surrounding context :'( )
             (seq-ref)))])))
 
+(define-art-object (divisions [n]))
+
+(define-rewriter exact-subdivide
+  (λ (stx)
+    (syntax-parse stx
+      [(_ division* ε*:number)
+       (define division (syntax-e #'division*))
+       (define ε (syntax-e #'ε*))
+       (define exprs
+         (flatten
+           (for/list ([expr (current-ctxt)])
+             (define-values (s e) 
+               (syntax-parse (context-ref (get-id-ctxt expr) #'interval)
+                 [(_ (_ s:number) (_ e:number))
+                  (values (syntax-e #'s) (syntax-e #'e))]))
+             (define s* (* s division))
+             (define e* (* e division))
+             (define (round+ensure-whole n)
+               (define rounded (round n))
+               (and (< (- rounded n) ε) (> (- rounded n) (- ε)) (inexact->exact rounded)))
+              
+             (define s** (or (round+ensure-whole s*) (raise-syntax-error 'exact-subdivide "score does not subdivide into the given number of divisions." expr)))
+             (define e** (or (round+ensure-whole e*) (raise-syntax-error 'exact-subdivide "score does not subdivide into the given number of divisions." expr)))
+             (list (delete-expr expr) (put-in-id-ctxt expr #'interval #`((start #,s**) (end #,e**)))))))
+       #`(@ () #,@(cons (qq-art #'division* (divisions division*)) exprs))])))
 
 ;;;;;;; INSTANT/SWITCH
 ;; interval -> instant + switch

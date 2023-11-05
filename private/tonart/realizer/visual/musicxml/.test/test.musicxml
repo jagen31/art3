@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE score-partwise PUBLIC
+    "-//Recordare//DTD MusicXML 4.0 Partwise//EN"
+    "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="4.0">
+  <part-list>
+    <score-part id="tenor-trombone">
+  <part-name>tenor-trombone</part-name>
+</score-part>
+<score-part id="strings">
+  <part-name>strings</part-name>
+</score-part>
+<score-part id="bass-trombone">
+  <part-name>bass-trombone</part-name>
+</score-part>
+<score-part id="altos">
+  <part-name>altos</part-name>
+</score-part>
+<score-part id="bassoon-1">
+  <part-name>bassoon-1</part-name>
+</score-part>
+<score-part id="bassoon-2">
+  <part-name>bassoon-2</part-name>
+</score-part>
+<score-part id="sopranos">
+  <part-name>sopranos</part-name>
+</score-part>
+<score-part id="tenors">
+  <part-name>tenors</part-name>
+</score-part>
+<score-part id="default">
+  <part-name>default</part-name>
+</score-part>
+<score-part id="trumpet">
+  <part-name>trumpet</part-name>
+</score-part>
+<score-part id="timpani">
+  <part-name>timpani</part-name>
+</score-part>
+<score-part id="basses">
+  <part-name>basses</part-name>
+</score-part>
+  </part-list>
+
+  
+</score-partwise>

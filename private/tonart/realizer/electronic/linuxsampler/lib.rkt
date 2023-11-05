@@ -7,13 +7,13 @@
   (for-syntax syntax/parse racket/match racket/list racket/string racket/dict) rsound rsound/envelope sf2-parser)
 (provide (all-defined-out))
 
-;; create an rsound
+;; create a c++ string containing a program which plays the score via linuxsampler
 (define-syntax (define-composite-linuxsampler-performer stx)
   (syntax-parse stx
     [(_ n:id {subperformer:id ...})
      #'(begin
          (define-composite-performer n {subperformer ...} [] 
-           (λ(clauses) 
+           (λ(clauses)
               #`(begin
                   (define-values (note-statements instruments)
                     (for/fold ([statements '()] [instruments (set)] [t 0] #:result (values (reverse statements) (set->list instruments)))

@@ -435,11 +435,11 @@ now!
   (i@ [0 100]
     (instrument-map
       [voice . 000/000_Montre_8]
-      [trombone . 001/052_Tromp._en_chamade] ;; >_<>_<>_<<<<<< Owwwww
+      [trombone . 000/025_Trompette_8]
       [bassoon . 001/055_Voix_Celeste_8]
       [trumpet . 000/069_Quintadena8Viola4]
       [timpani . 000/073_Cornemuse_8]
-      [strings . 000/069_Quintadena8Viola4]))
+      [strings . 000/069_Quintadena8]))
 
   (m@ [0 48 (sopranos)] (instrument voice))
   (m@ [0 48 (altos)] (instrument voice))
@@ -465,7 +465,8 @@ now!
     (expand-confutatis) (expand-flammis) (expand-voca-ostinato) (expand-voca-ostinato-^) ; expand the vars
     (expand-repeat) (apply-rhythm) ; repeats and rhythms
     (run-transpose-diatonic) (^->note) ; working with scale degrees
-    (note->midi) (d/dt) ; ready to render
+    #;(note->midi) #;(d/dt) ; ready to render
+    (exact-subdivide 8 0.001)
     )]
 
 
@@ -475,17 +476,30 @@ now!
          "../rewriter/stdlib.rkt" 
          "../rewriter/common-practice/lib.rkt"
          "../realizer/electronic/lib.rkt" 
-         "../realizer/electronic/linuxsampler/lib.rkt")
+         "../realizer/electronic/linuxsampler/lib.rkt"
+         "../realizer/visual/musicxml/lib.rkt")
 
   <the-definitions>
   
-    (define sound 
+    #;(define sound 
       (perform linuxsampler-performer
        <the-header> 
        (-- 0 [24 <the-confutatis>] [15 <the-voca>])
        <the-footer>))
         
-    (define file (open-output-file "private/tonart/realizer/electronic/linuxsampler/.test/test.cpp" 
+    #;(define file (open-output-file "private/tonart/realizer/electronic/linuxsampler/.test/test.cpp" 
                                    #:exists 'replace))
-    (displayln sound file)
+    #;(displayln sound file)
+    #;(close-output-port file)
+    
+    
+    (define xml
+      (perform musicxml-performer
+       <the-header> 
+       (-- 0 [24 <the-confutatis>] [15 <the-voca>])
+       <the-footer>))
+        
+    (define file (open-output-file "private/tonart/realizer/visual/musicxml/.test/test.musicxml" 
+                                   #:exists 'replace))
+    (displayln xml file)
     (close-output-port file)]

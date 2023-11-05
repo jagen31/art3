@@ -19,9 +19,17 @@ auto trombone = sampler->AddSamplerChannel();
 trombone->SetAudioOutputDevice(device);
 trombone->SetEngineType("SFZ");
 trombone->GetEngineChannel()->PrepareLoadInstrument(
-(fs::current_path() / ".." / ".." / "resources" / "sfz" / "Jeux14" / "001/052_Tromp._en_chamade.sfz").string().c_str(),
+(fs::current_path() / ".." / ".." / "resources" / "sfz" / "Jeux14" / "000/025_Trompette_8.sfz").string().c_str(),
   0);
 trombone->GetEngineChannel()->LoadInstrument();
+
+auto strings = sampler->AddSamplerChannel();
+strings->SetAudioOutputDevice(device);
+strings->SetEngineType("SFZ");
+strings->GetEngineChannel()->PrepareLoadInstrument(
+(fs::current_path() / ".." / ".." / "resources" / "sfz" / "Jeux14" / "000/069_Quintadena8.sfz").string().c_str(),
+  0);
+strings->GetEngineChannel()->LoadInstrument();
 
 auto bassoon = sampler->AddSamplerChannel();
 bassoon->SetAudioOutputDevice(device);
@@ -30,14 +38,6 @@ bassoon->GetEngineChannel()->PrepareLoadInstrument(
 (fs::current_path() / ".." / ".." / "resources" / "sfz" / "Jeux14" / "001/055_Voix_Celeste_8.sfz").string().c_str(),
   0);
 bassoon->GetEngineChannel()->LoadInstrument();
-
-auto strings = sampler->AddSamplerChannel();
-strings->SetAudioOutputDevice(device);
-strings->SetEngineType("SFZ");
-strings->GetEngineChannel()->PrepareLoadInstrument(
-(fs::current_path() / ".." / ".." / "resources" / "sfz" / "Jeux14" / "000/069_Quintadena8Viola4.sfz").string().c_str(),
-  0);
-strings->GetEngineChannel()->LoadInstrument();
 
 auto trumpet = sampler->AddSamplerChannel();
 trumpet->SetAudioOutputDevice(device);
