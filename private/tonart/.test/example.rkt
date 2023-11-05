@@ -66,11 +66,11 @@
 ))
 
 #;(perform music-pstream-performer 
-  (m@ [2 32 (one)] (instrument Clarinet))
-  (-- 2 [15 (repeat 6 (m@ [0 6 (one)] (rhythm 2 2 2)))] [15 (repeat 6 (m@ [0 6 (one)] (rhythm 1 1 1)))])
-  (m@ [2 32 (one)] (expand-repeat))
-  (m@ [2 32 (one)] (seq (midi 61) (midi 62) (midi 63)))
-  (m@ [2 32 (one)] (apply-rhythm))
+  (musi@ [2 32 (one)] (instrument Clarinet))
+  (-- 2 [15 (repeat 6 (musi@ [0 6 (one)] (rhythm 2 2 2)))] [15 (repeat 6 (musi@ [0 6 (one)] (rhythm 1 1 1)))])
+  (musi@ [2 32 (one)] (expand-repeat))
+  (musi@ [2 32 (one)] (seq (midi 61) (midi 62) (midi 63)))
+  (musi@ [2 32 (one)] (apply-rhythm))
   )
 
 (play test)

@@ -43,17 +43,17 @@
     (ss@ (accomp) (-- 0 [3 (key d 0 major)] [3 (key c 0 minor)] [3 (key g 0 major)]))
 
     ;; repeat this pattern
-    (m@ [0 9 (accomp)] (repeat 3 (-- 0 [1 (^ 2)] [1 (^ 5)] [1 (^ 1)])))
+    (musi@ [0 9 (accomp)] (repeat 3 (-- 0 [1 (^ 2)] [1 (^ 5)] [1 (^ 1)])))
 
-    (m@ [0 9 (melody)] 
+    (musi@ [0 9 (melody)] 
       (rhythm .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 .5 1)
       (seq (note a 0 5) (note g 1 5) (note a 0 5) (note b 0 5) (note a 0 5) (note f 1 5)
            (note e 0 5) (note d 0 5) (note e 0 5) (note c 0 5) (note g 0 5) (note f 1 5)
            (note g 0 5) (note d 0 5) (note b 0 4) (note d 0 5) (note g 0 4))
       (apply-rhythm))
       
-    (m@ [0 9 (melody)] (instrument |Yamaha Grand Piano|) (octave 4))
-    (m@ [0 9 (accomp)] (instrument |Yamaha Grand Piano|) (octave 4))
+    (musi@ [0 9 (melody)] (instrument |Yamaha Grand Piano|) (octave 4))
+    (musi@ [0 9 (accomp)] (instrument |Yamaha Grand Piano|) (octave 4))
 
     (i@ [0 9] (tempo 120) (expand-repeat) (^->note) (note->midi))))
 

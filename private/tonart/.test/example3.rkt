@@ -87,7 +87,7 @@ Con-fu-ta-tis.
     (rhythm 0.75 0.25 1 1))]
 
 @chunk[<the-confutatis>
-  (m@ [1 4 (basses)]
+  (musi@ [1 4 (basses)]
     (confutatis-rhythm)
     (seq (note a 0 3) (note e 0 3) (note c 0 4) (note a 0 3)))
 ]
@@ -98,7 +98,7 @@ Second measure, second beat.
 Ma-le-dic-tis.
 
 @chunk[<the-confutatis>
-  (m@ [5 8 (basses)]
+  (musi@ [5 8 (basses)]
     (confutatis-rhythm)
     (seq (note b 0 3) (note e 0 3) (note d 0 4) (note g 1 3)))]
 
@@ -119,7 +119,7 @@ Flam-mis a-cri-bus ad-dic-tis.
     (rhythm 0.75 0.25 0.75 0.25 0.75 0.25 1 1))]
 
 @chunk[<the-confutatis>
-  (m@ [9 14 (basses)]
+  (musi@ [9 14 (basses)]
     (flammis-rhythm)
     (seq (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 0 3) (note f 0 3) (note d 0 3)))]
 
@@ -130,11 +130,11 @@ Ma-le-dic-tis, flam-mis a-cri-bus ad-
 dic-tis.
 
 @chunk[<the-confutatis>
-  (m@ [15 24 (basses)]
-    (-- 0 [2 (rhythm 0.75 0.25 0.75 0.25)] 
-          [5 (flammis-rhythm)])
-    (-- 0 [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
-          [5 (seq (note g 1 3) (note e 0 3)
+  (music@ [(4 4) (basses)]
+    (-m- (1 1) [2 (rhythm 0.75 0.25 0.75 0.25)] 
+               [5 (flammis-rhythm)])
+    (-m- (1 1) [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
+               [5 (seq (note g 1 3) (note e 0 3)
                   (note c 0 4) (note a 0 3) (note c 0 4) (note a 0 3) 
                   (note g 1 3) (note e 0 3))]))]
 
@@ -158,7 +158,7 @@ the first measure — C.
 Con-fu-ta-tis.
 
 @chunk[<the-confutatis>
-  (m@ [3 6 (tenors)]
+  (musi@ [3 6 (tenors)]
     (confutatis-rhythm)
     (seq (note c 0 4) (note a 0 3) (note d 0 4) (note g 1 3)))
 ]
@@ -169,7 +169,7 @@ Second measure, fourth beat on D.
 Ma-le-dic-tis.
 
 @chunk[<the-confutatis>
-  (m@ [7 10 (tenors)]
+  (musi@ [7 10 (tenors)]
     (confutatis-rhythm)
     (seq (note d 0 4) (note b 0 3) (note e 0 4) (note a 0 3)))
 ]
@@ -188,7 +188,7 @@ mis a-cri-bus ad-dic-tis.
 
 
 @chunk[<the-confutatis>
-  (m@ [13 23 (tenors)]
+  (musi@ [13 23 (tenors)]
     (-- 0 [4 (rhythm 0.75 0.25 0.75 0.25 0.75 0.25 0.75 0.25)] [5 (flammis-rhythm)])
     (-- 0 [4 (seq (note f 0 4) (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 1 3) (note e 0 3))]
           [5 (seq (note d 0 4) (note d 0 4) (note d 1 4) (note d 1 4) (note d 1 4) (note d 1 4) (note e 0 4) (note e 0 3))]))]
@@ -210,7 +210,7 @@ the opening notes of
 the bass vocal line)
 
 @chunk[<the-confutatis>
-  (m@ [0 24 (basses)] 
+  (musi@ [0 24 (basses)] 
     (copy-to (bassoon-2))
     (copy-to (bass-trombone)))]
 
@@ -238,7 +238,7 @@ SALIERI
 Also identical?
 
 @chunk[<the-confutatis>
-  (m@ [0 24 (tenors)] 
+  (musi@ [0 24 (tenors)] 
     (copy-to (bassoon-1))
     (copy-to (tenor-trombone)))]
 
@@ -396,7 +396,7 @@ He sings the violin figure under the Voca Me (Bars 7,8,9).
     (seq (^ 1) (^ 3) (^ 5) (^ 8) (^ 7) (^ 6) (^ 5) (^ 4) (^ 3) (^ 2) (^ 3) (^ 4) (^ 5) (^ -2) (^ 1)))]
 
 @chunk[<the-voca>
-  (m@ [0 15 (strings)]
+  (musi@ [0 15 (strings)]
     (key c 0 major)
     (octave 4)
     (-- 0 [6.5 (voca-ostinato)] [1.5 (rhythm 0.25 0.25 0.5 0.25 0.25)] [6.5 (voca-ostinato)])
@@ -439,23 +439,23 @@ now!
       [bassoon . 001/055_Voix_Celeste_8]
       [trumpet . 000/069_Quintadena8Viola4]
       [timpani . 000/073_Cornemuse_8]
-      [strings . 000/069_Quintadena8]))
+      [strings . 000/065_Quintadena_8]))
 
-  (m@ [0 48 (sopranos)] (instrument voice))
-  (m@ [0 48 (altos)] (instrument voice))
-  (m@ [0 48 (tenors)] (instrument voice))
-  (m@ [0 48 (basses)] (instrument voice))
+  (musi@ [0 48 (sopranos)] (instrument voice))
+  (musi@ [0 48 (altos)] (instrument voice))
+  (musi@ [0 48 (tenors)] (instrument voice))
+  (musi@ [0 48 (basses)] (instrument voice))
 
-  (m@ [0 48 (bass-trombone)] (instrument trombone))
-  (m@ [0 48 (bassoon-2)] (instrument bassoon))
+  (musi@ [0 48 (bass-trombone)] (instrument trombone))
+  (musi@ [0 48 (bassoon-2)] (instrument bassoon))
 
-  (m@ [0 48 (tenor-trombone)] (instrument trombone))
-  (m@ [0 48 (bassoon-1)] (instrument bassoon))
+  (musi@ [0 48 (tenor-trombone)] (instrument trombone))
+  (musi@ [0 48 (bassoon-1)] (instrument bassoon))
 
-  (m@ [0 48 (trumpet)] (instrument trumpet))
-  (m@ [0 48 (timpani)] (instrument timpani))
+  (musi@ [0 48 (trumpet)] (instrument trumpet))
+  (musi@ [0 48 (timpani)] (instrument timpani))
 
-  (m@ [0 48 (strings)] (instrument strings))
+  (musi@ [0 48 (strings)] (instrument strings))
 
   (i@ [0 48] (tempo 86))
 ]
@@ -465,8 +465,7 @@ now!
     (expand-confutatis) (expand-flammis) (expand-voca-ostinato) (expand-voca-ostinato-^) ; expand the vars
     (expand-repeat) (apply-rhythm) ; repeats and rhythms
     (run-transpose-diatonic) (^->note) ; working with scale degrees
-    #;(note->midi) #;(d/dt) ; ready to render
-    (exact-subdivide 8 0.001)
+    (note->midi) (d/dt) ; ready to render
     )]
 
 
@@ -480,26 +479,27 @@ now!
          "../realizer/visual/musicxml/lib.rkt")
 
   <the-definitions>
+
   
-    #;(define sound 
+    (define sound 
       (perform linuxsampler-performer
        <the-header> 
        (-- 0 [24 <the-confutatis>] [15 <the-voca>])
        <the-footer>))
         
-    #;(define file (open-output-file "private/tonart/realizer/electronic/linuxsampler/.test/test.cpp" 
+    (define file (open-output-file "private/tonart/realizer/electronic/linuxsampler/.test/test.cpp" 
                                    #:exists 'replace))
-    #;(displayln sound file)
-    #;(close-output-port file)
+    (displayln sound file)
+    (close-output-port file)
     
     
-    (define xml
+    #;(define xml
       (perform musicxml-performer
        <the-header> 
        (-- 0 [24 <the-confutatis>] [15 <the-voca>])
        <the-footer>))
         
-    (define file (open-output-file "private/tonart/realizer/visual/musicxml/.test/test.musicxml" 
+    #;(define file (open-output-file "private/tonart/realizer/visual/musicxml/.test/test.musicxml" 
                                    #:exists 'replace))
-    (displayln xml file)
-    (close-output-port file)]
+    #;(displayln xml file)
+    #;(close-output-port file)]

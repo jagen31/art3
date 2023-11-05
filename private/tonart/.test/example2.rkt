@@ -13,7 +13,7 @@
       [16 (repeat 8 (rhythm .5 .5 .5 .5 1 1 .5 .5 .5 .5 2))] 
       ;; variety is the spice of life
       [16 (repeat 8 (rhythm 1 1 .5 .5 .5 .5 .25 .25 1 0.5 2))]))
-  (m@ [0 32 (bass)] 
+  (musi@ [0 32 (bass)] 
     ;; ... but not in the bass
     (repeat 8 (rhythm 2 2 2 2))))
 
@@ -32,8 +32,8 @@
 ;; just a logical organization
 (define-simple-rewriter the-notes expand-the-notes
   ;; the notes to use
-  (m@ [0 32 (melody)] (cool-melody-seq))
-  (m@ [0 32 (bass)] (punchy-4note-seq)))
+  (musi@ [0 32 (melody)] (cool-melody-seq))
+  (musi@ [0 32 (bass)] (punchy-4note-seq)))
 
 (define sound
   (perform 
@@ -46,8 +46,8 @@
 
   ;; we'll render these as midi, which requires an instrument specified.
   ;; the instruments to use:
-  (m@ [0 32 (melody)] (instrument |Tromp. en chamade|))
-  (m@ [0 32 (bass)] (instrument |Krummhorn 8|))
+  (musi@ [0 32 (melody)] (instrument |Tromp. en chamade|))
+  (musi@ [0 32 (bass)] (instrument |Krummhorn 8|))
 
   ;; render things
   (i@ [0 32] 

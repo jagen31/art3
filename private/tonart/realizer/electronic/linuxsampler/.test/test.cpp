@@ -27,7 +27,7 @@ auto strings = sampler->AddSamplerChannel();
 strings->SetAudioOutputDevice(device);
 strings->SetEngineType("SFZ");
 strings->GetEngineChannel()->PrepareLoadInstrument(
-(fs::current_path() / ".." / ".." / "resources" / "sfz" / "Jeux14" / "000/069_Quintadena8.sfz").string().c_str(),
+(fs::current_path() / ".." / ".." / "resources" / "sfz" / "Jeux14" / "000/065_Quintadena_8.sfz").string().c_str(),
   0);
 strings->GetEngineChannel()->LoadInstrument();
 

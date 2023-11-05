@@ -2,6 +2,7 @@
 
 (require "../../../common/core.rkt" "../../../common/stdlib.rkt" "../../../common/coordinate/interval.rkt" 
          "../../realizer/electronic/lib.rkt"
+         "coordinate/metric-interval.rkt"
          (for-syntax syntax/parse racket/match racket/list "tonality.rkt"))
 (provide (all-defined-out))
 
@@ -102,3 +103,38 @@
 
 (define-art-object (time-sig [n d]))
 (define-art-object (dynamic [level]))
+
+(define-rewriter mi@
+  (λ(stx)
+    (syntax-parse stx
+      [(_ [(mstart* bstart*)])
+       ;; FIXME jagen fix this!!
+       #'(mi@ [(mstart* bstart*) (+inf.0 4)])]
+      [(_ [(mstart* bstart*) (mend* bend*)] expr ...)
+       (qq-art stx (@ [(metric-interval (start mstart* bstart*) (end mend* bend*))] expr ...))])))
+
+(perform quote-performer
+  (mi@ [(4 1) (8 2)]
+    (mi@ [(2 1) (3 1)] (note a 0 4))))
+
+(perform quote-performer
+  (mi@ [(4 1) (8 2)]
+    (mi@ [(2 1) (3 1)] 
+      (note a 0 4)
+      (metric-interval->interval))))
+
+(define-rewriter metric-interval->interval
+  (λ (stx)
+    (syntax-parse stx
+      [_
+       (define exprs
+         (flatten
+           (for/list ([expr (current-ctxt)])
+             (syntax-parse (context-ref (get-id-ctxt expr) #'metric-interval)
+               [(_ (_ ms*:number bs*:number) (_ me*:number be*:number))
+                (list (delete-expr expr) 
+                  (put-in-id-ctxt (remove-from-id-ctxt expr #'metric-interval) 
+                    #'interval 
+                    #`((start #,(+ (* 4 (sub1 (syntax-e #'ms*))) (sub1 (syntax-e #'bs*))))
+                       (end #,(+ (* 4 (sub1 (syntax-e #'me*))) (sub1 (syntax-e #'be*)))))))]))))
+       #`(@ () #,@exprs)])))
