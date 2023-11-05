@@ -6,8 +6,8 @@
 (provide (all-defined-out))
 
 ;;;;;;;;;;; METRIC INTERVAL THINGS
-(begin-for-syntax
-  (define (merge-metric-interval l r)
+  (define-hom-merge-rule metric-interval 
+    (λ (l r)
     (let/ec break
       (unless l (break r))
       (unless r (break l))
@@ -32,9 +32,10 @@
          #;(unless (or (not e1) (not e*) (< e* e1)) (println "oops") #;(raise-syntax-error 'merger (format "end is outside of parent interval: ~s" e2) e2))
   
          (qq-art r (metric-interval (start #,ms* #,bs2) (end #,me* #,be2)))]
-        [_ (error 'oops "whoops")])))
+        [_ (error 'oops "whoops")]))))
   
-  (define (metric-interval-within? l r)
+  (define-hom-within?-rule metric-interval-within? 
+    (λ (l r)
     (let/ec break
       (unless r (break #t))
       (unless l (break #f))
@@ -46,4 +47,4 @@
                    (syntax-e #'ms2*) (syntax-e #'bs2*) (syntax-e #'me2*) (syntax-e #'be2*)))
          (and (or (> ms1 ms2) (and (= ms1 ms2) (>= bs1 bs2)) (or (<= me1 me2) (and (= me1 me2) (<= be1 be2)))))]))))
 
-(define-coordinate (metric-interval [start end] merge-metric-interval metric-interval-within?))
+(define-coordinate (metric-interval [start end]))

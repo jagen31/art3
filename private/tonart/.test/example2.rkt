@@ -2,7 +2,7 @@
 
 (require "../../common/core.rkt" "../../common/stdlib.rkt" 
          "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
-         "../stdlib.rkt" "../common-practice/lib.rkt" "../computer/lib.rkt" "../organ/hymn.rkt"
+         "../rewriter/stdlib.rkt" "../rewriter/common-practice/lib.rkt" "../realizer/electronic/rsound/lib.rkt" "../rewriter/church/hymn.rkt"
   rsound (for-syntax syntax/parse))
 
 
@@ -46,8 +46,8 @@
 
   ;; we'll render these as midi, which requires an instrument specified.
   ;; the instruments to use:
-  (musi@ [0 32 (melody)] (instrument |Tromp. en chamade|))
-  (musi@ [0 32 (bass)] (instrument |Krummhorn 8|))
+  (musi@ [0 32 (melody)] (instrument |Clarinet|))
+  (musi@ [0 32 (bass)] (instrument |Violin|))
 
   ;; render things
   (i@ [0 32] 
@@ -65,6 +65,7 @@
     (note->midi) ; note -> midi
     ;; => midi, (seq note), instrument
     ;; performer will ignore the seq. midi is present w/ instrument and will be performed QED
+    (tempo 120)
     )))
 
 (set-output-device! 1)

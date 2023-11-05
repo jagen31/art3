@@ -1,7 +1,7 @@
 #lang racket
 
-(require syntax-spec rsound rsound/envelope 
-         (for-syntax racket (except-in ee-lib racket-var) syntax/parse) 
+(require syntax-spec rsound rsound/envelope
+         (for-syntax racket (except-in ee-lib racket-var) syntax/parse data/gvector) 
          (for-meta 2 syntax/parse))
 
 (provide (all-defined-out) (for-syntax (all-defined-out)))
@@ -9,8 +9,14 @@
 (begin-for-syntax
   (struct object/s [])
   (struct rewriter/s [body])
-  (struct coordinate/s [merger within?])
-  (define current-ctxt (make-parameter '())))
+  (struct coordinate/s [])
+  (define current-ctxt (make-parameter '()))
+  
+  (struct merge-rule/s [merge])
+  (struct within?-rule/s [within?])
+
+  (define merge-rules (gvector))
+  (define within?-rules (gvector)))
 
 (syntax-spec
   (binding-class art-performer)
@@ -34,9 +40,9 @@
     #:binding (export obj)
     #'(define-syntax obj (object/s)))
 
-  (host-interface/definitions (define-coordinate (coord:art-object [arg:expr ...] merge:expr within?:expr))
+  (host-interface/definitions (define-coordinate (coord:art-object [arg:expr ...]))
     #:binding (export coord)
-    #'(define-syntax coord (coordinate/s merge within?)))
+    #'(define-syntax coord (coordinate/s)))
 
   (host-interface/definitions (define-rewriter r:rewriter body:expr)
     #:binding (export r)
@@ -81,7 +87,29 @@
        (quasisyntax/loc this-syntax (set-id-ctxt compiled '()))])))
 
 
-(define-coordinate (id [] (λ (l r) (or r (qq-art l (id #,(gensym))))) (λ (_ __) #t)))
+
+(define-syntax (define-hom-merge-rule stx)
+  (syntax-parse stx
+    [(_ name:id body)
+     #'(begin-for-syntax (gvector-add! merge-rules 
+         (merge-rule/s (λ (l r) 
+                         (define l* (context-ref l #'name))
+                         (define r* (context-ref r #'name))
+                         (if (or l* r*) (put-in-ctxt r (body l* r*)) r)))))]))
+
+(define-syntax (define-hom-within?-rule stx)
+  (syntax-parse stx
+    [(_ name:id body)
+     #'(begin-for-syntax (gvector-add! within?-rules 
+         (within?-rule/s (λ (l r) 
+                           (define l* (context-ref l #'name))
+                           (define r* (context-ref r #'name))
+                           (if (or l* r*) (body l* r*) #t)))))]))
+
+(define-coordinate (id []))
+;; FIXME jagen this will never run
+(define-hom-merge-rule id (λ (l r) (or r (qq-art l (id #,(gensym))))))
+(define-hom-within?-rule id (λ (_ __) #t))
 
 (begin-for-syntax
   ;;;;;;;;;; CONTEXT THINGS
@@ -95,7 +123,8 @@
 
   (define (context-ref* ctxt name)
     (filter (λ(expr) (syntax-parse expr [(head:id _ ...) (free-identifier=? (compiled-from #'head) name)] [_ #f])) ctxt))
-  (define (context-ref ctxt name) (define result (context-ref* ctxt name))
+  (define (context-ref ctxt name) 
+    (define result (context-ref* ctxt name))
     (and (cons? result) (car result)))
 
   ;; find an element in the context of type name, which contains the given coords
@@ -107,55 +136,33 @@
               (context-within? coords (get-id-ctxt expr)))] 
         [_ #f]))
       ctxt))
-    (and (not (empty? candidates)) (car (sort candidates within?))))
+    (and (not (empty? candidates)) (car (sort candidates (λ (l r) (context-within? (get-id-ctxt l) (get-id-ctxt r)))))))
 
-  (define (remove-from-id-ctxt stx k) (syntax-property stx id-ctxt-prop 
+  (define (remove-from-ctxt ctxt k)
     (for/foldr ([acc '()]) 
-               ([prop (get-id-ctxt stx)])
+               ([prop ctxt])
       (syntax-parse prop
         [(head:id _ ...)
-         #:when (free-identifier=? (compiled-from #'head) k)
+        ;; FIXME jagen yeesh, figure out if k should be compiled or not or both
+         #:when (free-identifier=? (compiled-from #'head) (decompile-reference k))
          acc]
-        [_ (cons prop acc)]))))
+        [_ (cons prop acc)])))
 
-  (define (put-in-id-ctxt stx k v) (add-to-id-ctxt (remove-from-id-ctxt stx k) (qq-art k (#,k #,@v))))
+  (define (remove-from-id-ctxt stx k) (set-id-ctxt stx (remove-from-ctxt (get-id-ctxt stx) k)))
+
+  (define (put-in-ctxt ctxt expr)
+    (syntax-parse expr
+      [(head:id _ ...) (cons expr (remove-from-ctxt ctxt #'head))]))
+
+  (define (put-in-id-ctxt stx expr) (set-id-ctxt stx (put-in-ctxt (get-id-ctxt stx) (qq-art expr #,expr))))
 
 
   ;;;;;;;;;; COORDINATE THINGS
   (define (merge-coordinates left right)
-    (define left-coords (for/list ([expr left])
-      (syntax-parse expr
-        [(head:id _ ...)
-         (define merger (coordinate/s-merger (lookup #'head)))
-         (merger expr (context-ref right (compiled-from #'head)))])))
+    (for/fold ([acc right]) ([merge-rule merge-rules]) ((merge-rule/s-merge merge-rule) left acc)))
 
-    
-    (define coords 
-      (for/foldr ([acc left-coords])
-                 ([expr right])
-        (syntax-parse expr
-          [(head:id _ ...)
-           #:when (not (context-ref left-coords (compiled-from #'head)))
-           (define merger (coordinate/s-merger (lookup #'head)))
-           (cons (merger (context-ref left-coords (compiled-from #'head)) expr) acc)]
-          [_ acc])))
-    coords)
-
-    ;; FIXME jagen yikes
-    (define (within? l r)
-      (syntax-parse l
-        [(head:id _ ...)
-         #:when (lookup #'head object/s?)
-           #t]
-        [(head:id _ ...)
-         #:when (lookup #'head coordinate/s?)
-         ((coordinate/s-within? (lookup #'head)) l r)]))
-
-    (define (context-within? ctxt-l ctxt-r)
-      (for/and ([inner-coord ctxt-l])
-        (syntax-parse inner-coord
-          [(head:id _ ...)
-           (within? inner-coord (context-ref ctxt-r (compiled-from #'head)))])))
+  (define (context-within? ctxt-l ctxt-r)
+    (for/and ([within?-rule within?-rules]) ((within?-rule/s-within? within?-rule) ctxt-l ctxt-r)))
 
 
   ;; utility function to generate a `delete-by-id` instruction for an expr

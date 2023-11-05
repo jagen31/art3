@@ -113,16 +113,6 @@
       [(_ [(mstart* bstart*) (mend* bend*)] expr ...)
        (qq-art stx (@ [(metric-interval (start mstart* bstart*) (end mend* bend*))] expr ...))])))
 
-(perform quote-performer
-  (mi@ [(4 1) (8 2)]
-    (mi@ [(2 1) (3 1)] (note a 0 4))))
-
-(perform quote-performer
-  (mi@ [(4 1) (8 2)]
-    (mi@ [(2 1) (3 1)] 
-      (note a 0 4)
-      (metric-interval->interval))))
-
 (define-rewriter metric-interval->interval
   (λ (stx)
     (syntax-parse stx
@@ -134,7 +124,7 @@
                [(_ (_ ms*:number bs*:number) (_ me*:number be*:number))
                 (list (delete-expr expr) 
                   (put-in-id-ctxt (remove-from-id-ctxt expr #'metric-interval) 
-                    #'interval 
-                    #`((start #,(+ (* 4 (sub1 (syntax-e #'ms*))) (sub1 (syntax-e #'bs*))))
-                       (end #,(+ (* 4 (sub1 (syntax-e #'me*))) (sub1 (syntax-e #'be*)))))))]))))
+                    #`(interval 
+                        (start #,(+ (* 4 (sub1 (syntax-e #'ms*))) (sub1 (syntax-e #'bs*))))
+                        (end #,(+ (* 4 (sub1 (syntax-e #'me*))) (sub1 (syntax-e #'be*)))))))]))))
        #`(@ () #,@exprs)])))

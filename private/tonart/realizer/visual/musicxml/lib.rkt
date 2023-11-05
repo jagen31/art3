@@ -93,7 +93,7 @@
 
     (define voices (get-voices music))
     (define notes
-      (filter (λ (expr) (println expr) (syntax-parse expr [(head:id _ ...) (free-identifier=? (compiled-from #'head) #'note)])) 
+      (filter (λ (expr) (syntax-parse expr [(head:id _ ...) (free-identifier=? (compiled-from #'head) #'note)])) 
               music))
 
     (define notes-by-voice (partition-by-voice notes))

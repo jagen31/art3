@@ -36,7 +36,7 @@
 #;(displayln linuxsampler-string)
 (displayln musicxml-string)
 
-#;(define result 
+(define result 
   (perform music-rsound-performer 
 
     ;; the keys
@@ -60,5 +60,5 @@
 
 #;(define result (perform music-rsound-performer (i@ [0 96] (hyfrydol) (hyfrydol->notes) (note->midi) (tempo 120) (instrument |Yamaha Grand Piano|))))
 
-#;(set-output-device! 2)
-#;(play result)
+(set-output-device! 1)
+(play result)

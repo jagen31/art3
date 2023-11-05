@@ -130,11 +130,11 @@ Ma-le-dic-tis, flam-mis a-cri-bus ad-
 dic-tis.
 
 @chunk[<the-confutatis>
-  (music@ [(4 4) (basses)]
-    (-m- (1 1) [2 (rhythm 0.75 0.25 0.75 0.25)] 
-               [5 (flammis-rhythm)])
-    (-m- (1 1) [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
-               [5 (seq (note g 1 3) (note e 0 3)
+  (musi@ [15 24 (basses)]
+    (-- 0 [2 (rhythm 0.75 0.25 0.75 0.25)] 
+          [5 (flammis-rhythm)])
+    (-- 0 [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
+          [5 (seq (note g 1 3) (note e 0 3)
                   (note c 0 4) (note a 0 3) (note c 0 4) (note a 0 3) 
                   (note g 1 3) (note e 0 3))]))]
 

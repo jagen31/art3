@@ -24,7 +24,7 @@
              [({~datum !} value:number)
                (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
                (unless items 
-                 (define msg (format "no list items in context for ref. context: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
+                 (define msg (format "no seq in context for ref. ref: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
                  (raise-syntax-error 'seq-ref msg expr))
                (syntax-parse items
                  [(_ the-items ...) 
@@ -161,7 +161,7 @@
        (with-syntax ([(target* ...)
          (for/list ([item target])
            ;; FIXME jagen preserve orthogonality?
-           #`(put #,(put-in-id-ctxt item #'subset #'(ss* ...))))])
+           #`(put #,(put-in-id-ctxt item #'(subset ss* ...))))])
          #`(@ () target* ...))])))
 
 
@@ -266,7 +266,7 @@
               
              (define s** (or (round+ensure-whole s*) (raise-syntax-error 'exact-subdivide "score does not subdivide into the given number of divisions." expr)))
              (define e** (or (round+ensure-whole e*) (raise-syntax-error 'exact-subdivide "score does not subdivide into the given number of divisions." expr)))
-             (list (delete-expr expr) (put-in-id-ctxt expr #'interval #`((start #,s**) (end #,e**)))))))
+             (list (delete-expr expr) (put-in-id-ctxt expr #'(interval (start #,s**) (end #,e**)))))))
        #`(@ () #,@(cons (qq-art #'division* (divisions division*)) exprs))])))
 
 ;;;;;;; INSTANT/SWITCH
@@ -288,6 +288,6 @@
                [(_ (_ s:number) (_ e:number))
                 (define new-item (remove-from-id-ctxt item #'interval))
                 (list (delete-expr item)
-                      (put-in-id-ctxt (put-in-id-ctxt new-item #'switch #'(#t)) #'instant #'(s))
-                      (put-in-id-ctxt (put-in-id-ctxt new-item #'switch #'(#f)) #'instant #'(e)))])))])
+                      (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #t)) #'(instant s))
+                      (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #f)) #'(instant e)))])))])
          #`(@ () target* ...))])))
