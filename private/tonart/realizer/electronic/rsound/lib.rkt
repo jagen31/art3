@@ -57,6 +57,11 @@
            [({~datum interval} ({~datum start} val:number) ({~datum end} val2:number)) (values (syntax-e #'val) (syntax-e #'val2))]))
          ;; FIXME jagen THIS ASSUMES UNIFORM TEMPO
          (define tempo (context-ref/surrounding ctxt (get-id-ctxt stx) #'tempo))
+         (unless tempo 
+           (begin
+             (define msg (format "no tempo in context for tone. tone: ~a. candidates: ~a" (un-@ stx) (map un-@ (context-ref* ctxt #'tempo))))
+             (raise-syntax-error 'tone-subperformer msg stx)))
+
          (syntax-parse tempo
            [({~datum tempo} tempo*:number)
          (cons #`(let ([duration (get-duration #,start* #,end* tempo*)]) 
@@ -70,7 +75,10 @@
                ([stx ctxt])
       (syntax-parse stx
         [({~datum midi} num:number) 
-         (define-values (start* end*) (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
+         (define iv (context-ref (get-id-ctxt stx) #'interval))
+         (unless iv (raise-syntax-error 'midi-subperformer 
+           (format "this performer requires beat intervals for all midis, got: ~s" (syntax->datum (un-@ stx))) stx))
+         (define-values (start* end*) (syntax-parse iv
            [({~datum interval} ({~datum start} val:number) ({~datum end} val2:number)) (values (syntax-e #'val) (syntax-e #'val2))]))
          (define instrument (context-ref/surrounding ctxt (get-id-ctxt stx) #'instrument))
          ;; FIXME jagen THIS ASSUMES UNIFORM TEMPO

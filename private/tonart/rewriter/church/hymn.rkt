@@ -7,7 +7,7 @@
 (define-art-object (st-flavian []))
 
 (define-mapping-rewriter (st-flavian->notes [(: melodies st-flavian)])
-  (λ (melody)
+  (λ (stx melody)
     (qq-art melody
         (-- 0 [1 (note f 0 4)] 
           [1 (note f 0 4)]  [1 (note e 0 4)]  [1 (note f 0 4)] [1 (note a 0 4)]
@@ -22,7 +22,7 @@
 (define-art-object (stuttgart []))
 
 (define-mapping-rewriter (stuttgart->notes [(: melody stuttgart)])
-  (λ (melody)
+  (λ (stx melody)
     (qq-art melody
       (-- 0 
         [1 (note d 0 4)] [1 (note d 0 4)] [1 (note g 0 4)] [1 (note g 0 4)]
@@ -37,7 +37,7 @@
 (define-art-object (thaxted-a []))
 
 (define-mapping-rewriter (thaxted-a->notes [(: melody thaxted-a)])
-  (λ (melody)
+  (λ (stx melody)
     (qq-art melody
       (-- 0 [1/2 (note d 0 4)] [1/2 (note f 0 4)] 
             [3/2 (note g 0 4)] [1/2 (note b -1 4)] [3/4 (note a 0 4)] [1/4 (note f 0 4)] 
@@ -56,7 +56,7 @@
 
 
 (define-mapping-rewriter (hyfrydol->rhythm [(: melody hyfrydol)])
-  (λ(melody)
+  (λ(stx melody)
     (qq-art melody
       (pocket-rewrite
         (-- 0 [48 (repeat 24 (hyf-phrase1))]
@@ -65,7 +65,7 @@
         (i@ [0 96] (expand-repeat) (x-hyf-motif1) (x-hyf-motif1) #;(coalesce-rhythms))))))
 
 (define-mapping-rewriter (hyfrydol->notes [(: melody hyfrydol)])
-  (λ(melody)
+  (λ(stx melody)
     (qq-art melody
       (pocket-rewrite 
         (i@ [0 96] 

@@ -5,7 +5,7 @@
 
 ;;;;;;;;;;; INSTANT COORDINATE THINGS
 (define-hom-merge-rule instant 
-  (λ (l r)
+  (λ (l r _ __ ___)
     (let/ec break
       (unless l (break r))
       (unless r (break l))

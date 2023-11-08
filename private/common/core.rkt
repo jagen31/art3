@@ -86,16 +86,25 @@
        #:with compiled #'(quasisyntax/loc loc+id-ctxt #,(compile-art-references #`expr))
        (quasisyntax/loc this-syntax (set-id-ctxt compiled '()))])))
 
-
+(define-syntax (define-nonhom-merge-rule stx)
+  (define (do-it lname rname remove body)
+     #`(begin-for-syntax (gvector-add! merge-rules 
+         (merge-rule/s (λ (l r ctxt) 
+                         (define l* (context-ref l #'#,lname))
+                         (define r* (context-ref r #'#,rname))
+                         (if (and l* r*) (put-in-ctxt (remove-from-ctxt r #'#,remove) (#,body l* r* l r ctxt)) r))))))
+  (syntax-parse stx
+    [(_ lname:id rname:id #:keep-left body) (do-it #'lname #'rname #'rname #'body)]
+    [(_ lname:id rname:id #:keep-right body) (do-it #'lname #'rname #'lname #'body)]))
 
 (define-syntax (define-hom-merge-rule stx)
   (syntax-parse stx
     [(_ name:id body)
      #'(begin-for-syntax (gvector-add! merge-rules 
-         (merge-rule/s (λ (l r) 
+         (merge-rule/s (λ (l r ctxt) 
                          (define l* (context-ref l #'name))
                          (define r* (context-ref r #'name))
-                         (if (or l* r*) (put-in-ctxt r (body l* r*)) r)))))]))
+                         (if (or l* r*) (put-in-ctxt r (body l* r* l r ctxt)) r)))))]))
 
 (define-syntax (define-hom-within?-rule stx)
   (syntax-parse stx
@@ -108,7 +117,7 @@
 
 (define-coordinate (id []))
 ;; FIXME jagen this will never run
-(define-hom-merge-rule id (λ (l r) (or r (qq-art l (id #,(gensym))))))
+(define-hom-merge-rule id (λ (l r _ __ ___) (or r (qq-art l (id #,(gensym))))))
 (define-hom-within?-rule id (λ (_ __) #t))
 
 (begin-for-syntax
@@ -119,6 +128,7 @@
     (with-syntax ([(ctxt* ...) ctxt] [expr* expr]) (qq-art expr (@ [ctxt* ...] expr*))))
   (define (get-id-ctxt stx) (syntax-property stx id-ctxt-prop))
   (define (set-id-ctxt stx ctxt) (syntax-property stx id-ctxt-prop ctxt))
+  (define (ensure-id-ctxt stx) (if (get-id-ctxt stx) stx (set-id-ctxt stx '())))
   (define (add-to-id-ctxt stx expr) (syntax-property stx id-ctxt-prop (cons expr (syntax-property stx id-ctxt-prop))))
 
   (define (context-ref* ctxt name)
@@ -158,8 +168,8 @@
 
 
   ;;;;;;;;;; COORDINATE THINGS
-  (define (merge-coordinates left right)
-    (for/fold ([acc right]) ([merge-rule merge-rules]) ((merge-rule/s-merge merge-rule) left acc)))
+  (define (merge-coordinates left right ctxt)
+    (for/fold ([acc right]) ([merge-rule merge-rules]) ((merge-rule/s-merge merge-rule) left acc ctxt)))
 
   (define (context-within? ctxt-l ctxt-r)
     (for/and ([within?-rule within?-rules]) ((within?-rule/s-within? within?-rule) ctxt-l ctxt-r)))
@@ -172,7 +182,7 @@
 
 
 
-  (define (un-@ expr) #`(@ [#,@(get-id-ctxt expr)] #,expr))
+  (define (un-@ expr) (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] #,expr)))
 
 
   (define put-id (compile-reference #'id))
@@ -193,11 +203,8 @@
                (define inner-ctxt (or (get-id-ctxt inner-expr) '()))
                (define maybe-id (if (context-ref inner-ctxt #'id) '() (list #`(#,put-id #,(gensym)))))
                (define inner-ctxt* (append maybe-id inner-ctxt))
-               (define ctxt* (merge-coordinates (or (get-id-ctxt expr) '()) inner-ctxt*))
-               (set-id-ctxt
-                inner-expr
-                ;; FIXME jagen gensym
-                (append  ctxt*))))
+               (define ctxt* (merge-coordinates (or (get-id-ctxt expr) '()) inner-ctxt* ctxt))
+               (set-id-ctxt inner-expr ctxt*)))
 
              (compile-rewrite-exprs (cdr exprs) (append ctxt coordinated))]
           [({~datum delete-by-id} the-id:id)
@@ -210,10 +217,10 @@
                   ctxt))
             (compile-rewrite-exprs (cdr exprs) ctxt*)]
           [({~datum @} [coord ...] body ...)
-           (define coords* (merge-coordinates (or (get-id-ctxt expr) '()) (syntax->list #'(coord ...))))
+           (define coords* (merge-coordinates (or (get-id-ctxt expr) '()) (syntax->list #'(coord ...)) ctxt))
            (define coordinated 
              (for/list ([b (syntax->list #'(body ...))])
-               (set-id-ctxt b (merge-coordinates coords* (or (get-id-ctxt b) '())))))
+               (set-id-ctxt b (merge-coordinates coords* (or (get-id-ctxt b) '()) ctxt))))
            (define ctxt* (compile-rewrite-exprs coordinated ctxt))
            (compile-rewrite-exprs (cdr exprs) ctxt*)]
           [({~datum pocket-rewrite} expr ...)

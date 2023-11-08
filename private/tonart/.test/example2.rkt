@@ -9,11 +9,11 @@
 ;; this is the actual composition
 (define-simple-rewriter the-music expand-the-music
   (ss@ (melody) 
-    (-- 0 
+    (--
       [16 (repeat 8 (rhythm .5 .5 .5 .5 1 1 .5 .5 .5 .5 2))] 
       ;; variety is the spice of life
       [16 (repeat 8 (rhythm 1 1 .5 .5 .5 .5 .25 .25 1 0.5 2))]))
-  (musi@ [0 32 (bass)] 
+  (music@ [(1 1) (9 1) (bass)] 
     ;; ... but not in the bass
     (repeat 8 (rhythm 2 2 2 2))))
 
@@ -32,8 +32,8 @@
 ;; just a logical organization
 (define-simple-rewriter the-notes expand-the-notes
   ;; the notes to use
-  (musi@ [0 32 (melody)] (cool-melody-seq))
-  (musi@ [0 32 (bass)] (punchy-4note-seq)))
+  (music@ [(1 1) (9 1) (melody)] (cool-melody-seq))
+  (music@ [(1 1) (9 1) (bass)] (punchy-4note-seq)))
 
 (define sound
   (perform 
@@ -46,8 +46,8 @@
 
   ;; we'll render these as midi, which requires an instrument specified.
   ;; the instruments to use:
-  (musi@ [0 32 (melody)] (instrument |Clarinet|))
-  (musi@ [0 32 (bass)] (instrument |Violin|))
+  (music@ [(1 1) (9 1) (melody)] (instrument |Clarinet|))
+  (music@ [(1 1) (9 1) (bass)] (instrument |Violin|))
 
   ;; render things
   (i@ [0 32] 
@@ -58,6 +58,7 @@
     (expand-cool-melody-seq) ; cool-melody-seq -> (seq note)
     (expand-punchy-4note-seq) ; punchy-4note-seq -> (seq note)
     ;; => (repeat rhythm), (seq note), instrument
+    (metric-interval->interval)
     (expand-repeat) ; (repeat A) -> A
     ;; => rhythm, (seq note), instrument
     (apply-rhythm) ; (@ [(seq A)] rhythm) -> A 

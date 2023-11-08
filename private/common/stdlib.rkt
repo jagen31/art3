@@ -95,19 +95,19 @@
         (rewriter/s 
           (λ (stx)
             (define head-name binding-clause) ...
-            (body head-name ...))))))
+            (body stx head-name ...))))))
           
 (define-syntax (define-mapping-rewriter stx)
   (syntax-parse stx 
     [(_ (name:id [clause ...]) body)
     #'(define-standard-rewriter (name [clause ...]) 
-        (λ (melodies)
+        (λ (stx melodies)
           (with-syntax ([(result (... ...))
             (append
               (for/list ([melody melodies]) (delete-expr melody))
               (for/list ([melody melodies]) 
                 (parameterize ([current-ctxt (filter (λ(expr) (context-within? (get-id-ctxt expr) (get-id-ctxt melody))) (current-ctxt))])
-                  (body melody))))])
+                  (body stx melody))))])
             #'(@ () result (... ...)))))]))
 
 (define-syntax (define-simple-rewriter stx)
@@ -116,7 +116,7 @@
     #'(begin
         (define-art-object (name []))
         (define-mapping-rewriter (rewriter-name [(: _ name)]) 
-        (λ (obj)
+        (λ (stx obj)
           (syntax-parse obj
             [_
              (qq-art obj (@ () body ...))]))))]))
@@ -181,12 +181,14 @@
 (define-rewriter --
   (λ(stx)
     (syntax-parse stx
-      [(_ start* {~and box [len:number expr ...]} ...)
+      [(_ start*:number {~and box [len:number expr ...]} ...)
        #:with (result ...)
          (for/fold ([acc '()] [t (syntax-e #'start*)] #:result (reverse acc))
                    ([box (syntax->list #'(box ...))] [l (syntax->list #'(len ...))] [e (syntax->list #'((expr ...) ...))])
            (values (cons #`(i@ [#,t #,(+ t (syntax-e l))] #,@e) acc) (+ t (syntax-e l))))
-       (qq-art this-syntax (@ () result ...))])))
+       (qq-art this-syntax (@ () result ...))]
+      [(_ expr ...)
+       (qq-art this-syntax (-- 0 expr ...))])))
 
 
 ;; repeats are reified since that's something you might want to realize directly (the alternative is
@@ -194,12 +196,15 @@
 (define-art-object (repeat []))
 
 (define-mapping-rewriter (expand-repeat [(: repeats repeat)])
-  (λ (repeat)
+  (λ (stx repeat)
     (syntax-parse repeat
       [(_ size*:number expr ...)
        #:do [
         (define size (syntax-e #'size*))
-        (define-values (the-start the-end) (syntax-parse (context-ref (get-id-ctxt repeat) #'interval) 
+        (define iv (context-ref (get-id-ctxt repeat) #'interval))
+        (unless iv (raise-syntax-error 'expand-repeat
+          (format "repeat requires a beat interval, got: ~s" (syntax->datum (un-@ repeat))) repeat))
+        (define-values (the-start the-end) (syntax-parse iv
           [({~datum interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
        ]
        #:with (result ...)
@@ -229,14 +234,14 @@
 (define-art-object (rhythm []))
 
 (define-mapping-rewriter (apply-rhythm [(: rhythms rhythm)])
-  (λ (r)
+  (λ (stx r)
     (syntax-parse r
       [(_ expr:number ...)
        ;; FIXME copy id ctxt
        #:with (result ...)
          (for/list ([e (syntax->list #'(expr ...))] [i (in-naturals)])
-           #`[#,e (! #,i)])
-
+           #`[#,e #,(quasisyntax/loc stx (! #,i))])
+        
        (qq-art this-syntax
           (@ ()
             (-- 0 result ...)

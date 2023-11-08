@@ -5,7 +5,7 @@
 
 ;;;;;;;;;;; SUBSET COORDINATE THINGS
 (define-hom-merge-rule subset 
-  (λ(l r)
+  (λ (l r __ ___ ____)
     (let/ec break
       (unless l (break r))
       (unless r (break l))
