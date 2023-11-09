@@ -23,8 +23,8 @@
 
   (define accidental** (+ accidental* 
     (match type 
-      ['perfect (if (= num* 4) -1 0)] 
-      ['major 0] ['minor -1] 
+      [(or 'perfect 'P) (if (= num* 4) -1 0)] 
+      [(or 'major 'M) 0] [(or 'minor 'm) -1] 
       ['diminished (if (or (= num* 1) (= num* 5)) -1 -2)] ['augmented (if (eq? num* 4) 0 1)])))
   (list pitch* accidental**))
 
@@ -96,8 +96,8 @@
 (define (generate-chord pitch accidental type)
   (match-define `((,intervals ...) (,types ...))
     (match type
-      ['major '((1 3 5) (perfect major perfect))]
-      ['minor '((1 3 5) (perfect minor perfect))]
+      [(or 'major 'M) '((1 3 5) (perfect major perfect))]
+      [(or 'minor 'm) '((1 3 5) (perfect minor perfect))]
       ['diminished '((1 3 5) (perfect minor diminished))]))
   (generate-stack pitch accidental intervals types))
 

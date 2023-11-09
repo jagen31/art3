@@ -21,7 +21,6 @@
 (syntax-spec
   (binding-class art-performer)
   (binding-class art-object)
-  (binding-class art-id)
 
   (binding-class rewriter)
 
@@ -59,17 +58,17 @@
 
 (begin-for-syntax
 
-   ;;;;;;;; RENAMED REFERENCE THINGS
-   ;; FIXME jagen consider this harder
-    (define (compile-art-references stx)
-      (syntax-parse stx
-        [(exprs ...)
-         #:with (compiled ...) (map compile-art-references (syntax->list #'(exprs ...)))
-         (quasisyntax/loc stx (compiled ...))]
-        [ref:id 
-         ;; FIXME jagen how do you know if an id can be compiled?
-         (with-handlers ([(λ(x) #t) (λ(x) #'ref)]) (compile-reference #'ref))]
-        [_ stx]))
+  ;;;;;;;; RENAMED REFERENCE THINGS
+  ;; FIXME jagen consider this harder
+   (define (compile-art-references stx)
+     (syntax-parse stx
+       [(exprs ...)
+        #:with (compiled ...) (map compile-art-references (syntax->list #'(exprs ...)))
+        (quasisyntax/loc stx (compiled ...))]
+       [ref:id 
+        ;; FIXME jagen how do you know if an id can be compiled?
+        (with-handlers ([(λ(x) #t) (λ(x) #'ref)]) (compile-reference #'ref))]
+       [_ stx]))
 
   (define (decompile-reference ref)
     (with-handlers ([(λ(x) #t) (λ(x) ref)]) (compiled-from ref)))
@@ -115,10 +114,10 @@
                            (define r* (context-ref r #'name))
                            (if (or l* r*) (body l* r*) #t)))))]))
 
-(define-coordinate (id []))
+(define-coordinate (art-id []))
 ;; FIXME jagen this will never run
-(define-hom-merge-rule id (λ (l r _ __ ___) (or r (qq-art l (id #,(gensym))))))
-(define-hom-within?-rule id (λ (_ __) #t))
+(define-hom-merge-rule art-id (λ (l r _ __ ___) (or r (qq-art l (art-id #,(gensym))))))
+(define-hom-within?-rule art-id (λ (_ __) #t))
 
 (begin-for-syntax
   ;;;;;;;;;; CONTEXT THINGS
@@ -177,15 +176,12 @@
 
   ;; utility function to generate a `delete-by-id` instruction for an expr
   (define (delete-expr stx)
-    (with-syntax ([id (syntax-parse (context-ref (get-id-ctxt stx) #'id) [({~datum id} the-id:id) #'the-id])])
+    (with-syntax ([id (syntax-parse (context-ref (get-id-ctxt stx) #'art-id) [({~datum art-id} the-id:id) #'the-id])])
       (qq-art stx (delete-by-id id))))
-
-
 
   (define (un-@ expr) (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] #,expr)))
 
-
-  (define put-id (compile-reference #'id))
+  (define put-id (compile-reference #'art-id))
   (define (compile-rewrite-exprs exprs ctxt)
     (cond
       [(null? exprs) ctxt]
@@ -201,7 +197,7 @@
                   #:fail-unless (object/s? it) (raise-syntax-error 'compile-rewrite-exprs (format "unrecognized object: ~a" (syntax->datum inner-expr)) inner-expr)
                   (void)])
                (define inner-ctxt (or (get-id-ctxt inner-expr) '()))
-               (define maybe-id (if (context-ref inner-ctxt #'id) '() (list #`(#,put-id #,(gensym)))))
+               (define maybe-id (if (context-ref inner-ctxt #'art-id) '() (list #`(#,put-id #,(gensym)))))
                (define inner-ctxt* (append maybe-id inner-ctxt))
                (define ctxt* (merge-coordinates (or (get-id-ctxt expr) '()) inner-ctxt* ctxt))
                (set-id-ctxt inner-expr ctxt*)))
@@ -211,8 +207,10 @@
             (define ctxt*
               (filter 
                 (λ(expr) 
-                  (syntax-parse (context-ref (get-id-ctxt expr) #'id) 
-                    [(_ the-id*:id) (not (free-identifier=? #'the-id #'the-id*))]
+                  (syntax-parse (context-ref (get-id-ctxt expr) #'art-id) 
+                    [(_ the-id*:id) 
+                     (when (free-identifier=? #'the-id #'the-id*) (printf "deleting: ~s\n" expr))
+                     (not (free-identifier=? #'the-id #'the-id*))]
                     [_ #t])) 
                   ctxt))
             (compile-rewrite-exprs (cdr exprs) ctxt*)]

@@ -19,11 +19,6 @@
       #:datum-literals [start end]
       [((_ (start ms1*:number bs1*:number) (end me1*:number be1*:number)) (_ (start ms2*:number bs2*:number) (end me2*:number be2*:number)))
 
-       (define ms1 (syntax-e #'ms1*))
-       (define bs1 (syntax-e #'bs1*))
-       (define ms2 (syntax-parse #'ms2* [val:number (syntax-e #'val)] [_ #f]))
-       (define bs2 (syntax-parse #'bs2* [val:number (syntax-e #'val)] [_ #f]))
-
        (define (compute-offset m1 b1 m2 b2)
          (define m* (+ m1 m2 (- 2)))
          (define b* (+ b1 b2 (- 2)))
@@ -31,6 +26,10 @@
          (define b** (modulo b* 4))
          (values (add1 m**) (add1 b**)))
 
+       (define ms1 (syntax-e #'ms1*))
+       (define bs1 (syntax-e #'bs1*))
+       (define ms2 (syntax-parse #'ms2* [val:number (syntax-e #'val)] [_ #f]))
+       (define bs2 (syntax-parse #'bs2* [val:number (syntax-e #'val)] [_ #f]))
 
        (define me2 (syntax-parse #'me2* [val:number (syntax-e #'val)] [_ #f]))
        (define be2 (syntax-parse #'be2* [val:number (syntax-e #'val)] [_ #f]))

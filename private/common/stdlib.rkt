@@ -2,7 +2,7 @@
 
 (require "core.rkt" syntax-spec 
          "coordinate/instant.rkt" "coordinate/interval.rkt" "coordinate/subset.rkt" "coordinate/switch.rkt"
-         (for-syntax syntax/parse racket/list (except-in ee-lib racket-var)))
+         (for-syntax syntax/parse racket/list (except-in ee-lib racket-var) syntax/id-table))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 ;;;;;;;;;;;; SOME GENERIC OBJECTS that may come in handy.
@@ -193,16 +193,16 @@
 
 ;; repeats are reified since that's something you might want to realize directly (the alternative is
 ;; to have it be a rewrite.  In that case, a realizer will never encounter a repeat directly)
-(define-art-object (repeat []))
+(define-art-object (loop []))
 
-(define-mapping-rewriter (expand-repeat [(: repeats repeat)])
+(define-mapping-rewriter (expand-loop [(: repeats loop)])
   (λ (stx repeat)
     (syntax-parse repeat
       [(_ size*:number expr ...)
        #:do [
         (define size (syntax-e #'size*))
         (define iv (context-ref (get-id-ctxt repeat) #'interval))
-        (unless iv (raise-syntax-error 'expand-repeat
+        (unless iv (raise-syntax-error 'expand-loop
           (format "repeat requires a beat interval, got: ~s" (syntax->datum (un-@ repeat))) repeat))
         (define-values (the-start the-end) (syntax-parse iv
           [({~datum interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
@@ -211,7 +211,7 @@
          (for/list ([i (in-range 0 (- the-end the-start) size)])
            #`[#,size expr ...])
        (qq-art this-syntax (-- 0 result ...))]
-      [_ (error 'expand-repeat "oops")])))
+      [_ (error 'expand-loop "oops")])))
   
 
 (define-rewriter translate
@@ -233,20 +233,38 @@
 ;; nice & quick.
 (define-art-object (rhythm []))
 
+(define-rewriter uniform-rhythm
+  (λ (stx)
+    (syntax-parse (context-ref (get-id-ctxt stx) #'interval)
+      [(_ (start s) (end e))
+       (syntax-parse stx
+        [(_ val:number)
+         (define num (inexact->exact (floor (/ (- (syntax-e #'e) (syntax-e #'s)) (syntax-e #'val)))))
+         (qq-art stx (rhythm #,@(build-list num (λ (_) #'val))))])])))
+
+(define-for-syntax (do-apply-rhythm stx exprs)
+
+  (with-syntax ([(result ...) 
+    (for/list ([e exprs] [i (in-naturals)])
+      #`[#,e #,(quasisyntax/loc stx (! #,i))])])
+
+    (qq-art stx
+      (@ ()
+        (-- 0 result ...)
+        ;; FIXME jagen TOTALLY UNSAFE (this will seq-ref in the surrounding context :'( )
+        (seq-ref)))))
+
+(define-rewriter apply-rhythm*
+  (λ (stx)
+    (syntax-parse stx
+      [(apply-rhythm* expr:number ...)
+       (do-apply-rhythm stx (syntax->list #'(expr ...)))])))
+
 (define-mapping-rewriter (apply-rhythm [(: rhythms rhythm)])
   (λ (stx r)
     (syntax-parse r
       [(_ expr:number ...)
-       ;; FIXME copy id ctxt
-       #:with (result ...)
-         (for/list ([e (syntax->list #'(expr ...))] [i (in-naturals)])
-           #`[#,e #,(quasisyntax/loc stx (! #,i))])
-        
-       (qq-art this-syntax
-          (@ ()
-            (-- 0 result ...)
-            ;; FIXME jagen TOTALLY UNSAFE (this will seq-ref in the surrounding context :'( )
-            (seq-ref)))])))
+       (do-apply-rhythm stx (syntax->list #'(expr ...)))])))
 
 (define-art-object (divisions [n]))
 
@@ -296,3 +314,34 @@
                       (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #t)) #'(instant s))
                       (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #f)) #'(instant e)))])))])
          #`(@ () target* ...))])))
+
+(define-for-syntax interpretations (make-free-id-table))
+
+(define-syntax (interpretation+ stx)
+  (syntax-parse stx
+    [(_ name:id [iname*:id body* ...] ...)
+     (for ([iname (syntax->list #'(iname* ...))] [bodies (syntax->list #'((body* ...) ...))])
+       (free-id-table-update! interpretations #'name 
+         (λ (current) (free-id-table-set! current iname (qq-art #'iname (@ () #,@bodies))) current)
+         (λ () (make-free-id-table))))
+     (println
+       #'(begin
+           (define-art-object (iname* [])) ...))
+     #'(begin
+         (define-art-object (iname* [])) ...)]))
+
+(define-rewriter run-interpretation
+  (λ (stx)
+    (syntax-parse stx
+      [(_ interp*:id)
+       #:do [(define interp (free-id-table-ref interpretations #'interp*))]
+       #:with (result ...) 
+         (for/fold ([acc '()] #:result (reverse acc)) 
+                 ([expr (current-ctxt)])
+           (syntax-parse expr
+             [(head:id arg ...)
+              #:do [(define new-expr (free-id-table-ref interp (compiled-from #'head) #f))]
+              #:when new-expr 
+              (cons (qq-art expr #,new-expr) (cons (delete-expr expr) acc))]
+            [_ acc]))
+       #`(@ () result ...)])))

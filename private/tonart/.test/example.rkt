@@ -34,7 +34,7 @@
 
 (define test (perform music-rsound-performer 
   (i@ [0 4] (tone 440))
-  (i@ [0 6] (repeat 2 (my-music))) ;; -> my-music => my-music
+  (i@ [0 6] (loop 2 (my-music))) ;; -> my-music => my-music
   (pocket-rewrite
     (i@ [0 12] (instrument |Montre 8 Flute 4|))
     (i@ [0 10] (midi 61))
@@ -67,8 +67,8 @@
 
 #;(perform music-pstream-performer 
   (musi@ [2 32 (one)] (instrument Clarinet))
-  (-- 2 [15 (repeat 6 (musi@ [0 6 (one)] (rhythm 2 2 2)))] [15 (repeat 6 (musi@ [0 6 (one)] (rhythm 1 1 1)))])
-  (musi@ [2 32 (one)] (expand-repeat))
+  (-- 2 [15 (loop 6 (musi@ [0 6 (one)] (rhythm 2 2 2)))] [15 (loop 6 (musi@ [0 6 (one)] (rhythm 1 1 1)))])
+  (musi@ [2 32 (one)] (expand-loop))
   (musi@ [2 32 (one)] (seq (midi 61) (midi 62) (midi 63)))
   (musi@ [2 32 (one)] (apply-rhythm))
   )

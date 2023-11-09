@@ -61,6 +61,8 @@
 (define-art-object (^ [degree]))
 (define-art-object (octave [o]))
 
+(define-art-object (pitch [p a]))
+
 (define-rewriter ^->note
   (syntax-parser
     [_ 
@@ -204,3 +206,38 @@
 (define-nonhom-merge-rule interval metric-interval #:keep-right
   (λ (l r l* _ ctxt)
     (do-merge-metric-interval (do-interval->metric-interval l ctxt) r)))
+
+(define-art-object (chord [pitch accidental mode]))
+
+(define-art-object (relative-harmony [chords]))
+
+(define-for-syntax (odd-even-list li) 
+  (define (odd-even-list li lacc racc)
+    (cond 
+      [(null? li) (values (reverse lacc) (reverse racc))]
+      [(null? (cdr li)) (values (cons (car li) (reverse lacc)) (reverse racc))]
+      [else (odd-even-list (cddr li) (cons (car li) lacc) (cons (cadr li) racc))]))
+  (odd-even-list li '() '()))
+
+(define-mapping-rewriter (relative-harmony->chord-seq [(: harm relative-harmony)])
+  (λ (stx harm)
+    (println (map un-@ (current-ctxt)))
+    (syntax-parse harm
+      [(_ harmony ...)
+       (define start-pitch (context-ref/surrounding (current-ctxt) (get-id-ctxt harm) #'pitch))
+       (unless start-pitch (raise-syntax-error 'relative-harmony->chord-seq "no pitch in context for relative harmony" harm)) 
+       (syntax-parse start-pitch
+         [(_ p*:id a*:number)
+          #:do
+            [(define pitch (map syntax-e (list #'p* #'a*))) 
+             (define-values (chord-types transitions) (odd-even-list (syntax->datum #'(harmony ...))))
+             (println chord-types)
+             (println transitions)]
+          #:with (chords ...)
+            (for/fold ([chords '()] [pitch pitch] #:result (reverse chords)) 
+                      ([chord-type chord-types] [transition (cons '(P 1) transitions)])
+              (println transition)
+              (define new-pitch (transpose-by-interval (first pitch) (second pitch) (second transition) (first transition)))
+              (println new-pitch)
+              (values (cons #`(chord #,(first new-pitch) #,(second new-pitch) #,chord-type) chords) new-pitch))
+          (qq-art harm (seq chords ...))])])))

@@ -10,12 +10,12 @@
 (define-simple-rewriter the-music expand-the-music
   (ss@ (melody) 
     (--
-      [16 (repeat 8 (rhythm .5 .5 .5 .5 1 1 .5 .5 .5 .5 2))] 
+      [16 (loop 8 (rhythm .5 .5 .5 .5 1 1 .5 .5 .5 .5 2))] 
       ;; variety is the spice of life
-      [16 (repeat 8 (rhythm 1 1 .5 .5 .5 .5 .25 .25 1 0.5 2))]))
+      [16 (loop 8 (rhythm 1 1 .5 .5 .5 .5 .25 .25 1 0.5 2))]))
   (music@ [(1 1) (9 1) (bass)] 
     ;; ... but not in the bass
-    (repeat 8 (rhythm 2 2 2 2))))
+    (loop 8 (rhythm 2 2 2 2))))
 
 
 ;; these are example sequences i have in mind. the sequences gotta have the same
@@ -52,14 +52,14 @@
   ;; render things
   (i@ [0 32] 
     ;; current context type: the-music, the-notes, instrument
-    (expand-the-music) ; the-music -> (repeat rhythm)
+    (expand-the-music) ; the-music -> (loop rhythm)
     (expand-the-notes) ; the-notes -> cool-melody-seq, punchy-4note-seq
-    ;; => (repeat rhythm), cool-melody-seq, punchy-4note-seq, instrument
+    ;; => (loop rhythm), cool-melody-seq, punchy-4note-seq, instrument
     (expand-cool-melody-seq) ; cool-melody-seq -> (seq note)
     (expand-punchy-4note-seq) ; punchy-4note-seq -> (seq note)
-    ;; => (repeat rhythm), (seq note), instrument
+    ;; => (loop rhythm), (seq note), instrument
     (metric-interval->interval)
-    (expand-repeat) ; (repeat A) -> A
+    (expand-loop) ; (loop A) -> A
     ;; => rhythm, (seq note), instrument
     (apply-rhythm) ; (@ [(seq A)] rhythm) -> A 
     ;; => note, (seq note), instrument

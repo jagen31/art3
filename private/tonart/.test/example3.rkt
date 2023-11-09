@@ -284,9 +284,9 @@ He sings the urgent first measure of the ostinato.
     (measure@ [1 8] (octave 4))
 
     (measure@ [1 6] 
-      (repeat 1 (rhythm 0.125 0.125 0.25 0.25 0.25)))
+      (loop 1 (rhythm 0.125 0.125 0.25 0.25 0.25)))
     (measure@ [1 6] 
-      (repeat 2 (-- 0 [1 (seq (^ 1) (^ 2) (^ 3) (^ 3) (^ 3))] 
+      (loop 2 (-- 0 [1 (seq (^ 1) (^ 2) (^ 3) (^ 3) (^ 3))] 
                       [1 (seq (^ 3) (^ 2) (^ 1) (^ 1) (^ 1))]))))]
 
 MOZART
@@ -459,7 +459,7 @@ now!
   (mi@ [(0 100)]
     (metric-interval->interval)
     (expand-confutatis) (expand-flammis) (expand-voca-ostinato) (expand-voca-ostinato-^) ; expand the vars
-    (expand-repeat) (apply-rhythm) ; repeats and rhythms
+    (expand-loop) (apply-rhythm) ; repeats and rhythms
     (run-transpose-diatonic) (^->note) ; working with scale degrees
     (note->midi) (d/dt) ; ready to render
     )]
