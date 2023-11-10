@@ -12,7 +12,7 @@ Here are the main elements:
     [the-comp-rhythm (rhythm 1.5 1 1 0.5 1 0.5 2.5)]
     [the-comp-harmony 
       (relative-harmony M [M 7] M [m 7] M)]
-    [the-melody-rhythm (i@ [0 4] (uniform-rhythm 0.5))])]
+    [the-melody-rhythm (i@ [0 8] (uniform-rhythm 0.5))])]
 
 The comp has a syncopated rhythm and a harmony, and the melody is just constant eighth notes.
 
@@ -26,7 +26,7 @@ Here is the jam:
 @chunk[<the-music>
   (interpretation+ main
     [the-composition
-      (measure@ (1 2)
+      (i@ (0 8)
         (key+starting-chord-related-by-aug-5th right-hand left-hand)
         (ss@ (left-hand) (the-comp-harmony) (the-comp-rhythm))
         (ss@ (right-hand) (the-melody-rhythm))
@@ -56,7 +56,7 @@ then comp starting chord = E (A5) and comp key/final chord = Db (P4).
            (qq-art stx
              (|@| () 
                (ss@ (chord-voice) (pitch p a))
-               (ss@ (key-voice) (key key-pitch key-accidental)))))])))
+               (ss@ (key-voice) (key key-pitch key-accidental major)))))])))
 ]
 
 This is the official composition, everything before is considered scaffolding or composite parts.
@@ -69,7 +69,7 @@ in Ab/Db.
 @chunk[<the-music>
   (interpretation+ main
     [the-composition-for-perf
-      (measure@ (1 2)
+      (i@ (0 8)
         (the-composition)
         (run-interpretation main)
         ;; it's in a flat! (and d flat)
@@ -83,12 +83,23 @@ Here is a further version which can be compiled directly into code to run on the
 @chunk[<the-music>
   (interpretation+ main
     [the-composition-for-computer-perf
-      (measure@ (1 8)
+      (i@ (0 64)
 
-        #;(i@ [0 32] (loop 8 (the-composition-for-perf)))
-        #;(expand-loop)
-        (the-composition-for-perf)
+        ;; loop it every 8 beats (for a total of 8 times.  Sorry for the confusion, the 8 means every 8 beats.)
+        (loop 8 (the-composition-for-perf))
+        (expand-loop)
         (run-interpretation main)
+
+        (ss@ (right-hand) 
+          ;; loop this every 16
+          (loop 16
+            ;; just some sequence
+            (-- [8 (seq (^ 1) (^ 2) (^ 3) (^ 2) (^ 1) (^ 0) (^ 1) (^ 2) (^ 3) (^ 4) (^ 5) (^ 6) (^ 7) (^ 8) (^ 5) (^ 8))]
+                [8 (seq (^ 1) (^ 4) (^ 6) (^ 4) (^ 6) (^ 8) (^ 6) (^ 8) (^ 11) (^ 8) (^ 6) (^ 8) (^ 6) (^ 4) (^ 1) (^ 4))]))
+          (expand-loop)
+          (apply-rhythm)
+          (-- [16] [16 (transpose-diatonic -1)] [16 (transpose-diatonic -2)] [16 (transpose-diatonic -3)])
+          (run-transpose-diatonic))
 
         (ss@ (left-hand) 
           ;; map the chords to the comp rhythm.
@@ -97,10 +108,14 @@ Here is a further version which can be compiled directly into code to run on the
           ;; write out the chords as notes
           (chord->notes/simple 3))
 
+        (ss@ (right-hand) (apply-rhythm) (octave 5) (^->note))
+
         ;; midi things
         (note->midi)
-        (instrument-map [organ . 000/000_Montre_8])
+        (instrument-map [organ . 000/000_Montre_8]
+                        [trumpet . 000/065_Quintadena_8])
         (ss@ (left-hand) (instrument organ))
+        (ss@ (right-hand) (instrument trumpet))
         (tempo 120)
 
         ;; convert measure intervals to raw beat intervals
@@ -142,7 +157,7 @@ Here is a further version which can be compiled directly into code to run on the
 
   <the-definitions>
   <the-music>
-  (displayln (perform quote-performer (put (the-composition-for-computer-perf)) (run-interpretation main)))
+  #;(displayln (perform quote-performer (put (the-composition-for-computer-perf)) (run-interpretation main)))
 
   (define result 
     (perform linuxsampler-performer 

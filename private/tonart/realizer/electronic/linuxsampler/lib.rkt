@@ -56,7 +56,9 @@ auto |@(car iname) = sampler->AddSamplerChannel();
 |@(car iname)->GetEngineChannel()->LoadInstrument();
   
 }|) "\n")
+ std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 |@(string-join note-statements "\n")
+ std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
 }|))))]))
 
@@ -67,7 +69,7 @@ auto |@(car iname) = sampler->AddSamplerChannel();
     (unless imap* (raise-syntax-error 'midi-subperformer "no instrument map in context"))
     (define imap (syntax-parse imap* [(_ map ...) (syntax->datum #'(map ...))]))
     (define ctxt (sort ctxt* < 
-      #:key (λ (stx) (println stx) (syntax-parse (context-ref (get-id-ctxt stx) #'instant) [(_ result) (syntax-e #'result)]))))
+      #:key (λ (stx) (syntax-parse (context-ref (get-id-ctxt stx) #'instant) [(_ result) (syntax-e #'result)]))))
     (for/foldr ([acc '()])
                ([stx ctxt])
       (syntax-parse stx

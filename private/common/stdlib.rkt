@@ -23,7 +23,6 @@
            (syntax-parse expr
              [({~datum !} value:number)
                (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
-               (println (map un-@ (current-ctxt)))
                (unless items 
                  (define msg (format "no seq in context for ref. ref: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
                  (raise-syntax-error 'seq-ref msg expr))
@@ -241,13 +240,13 @@
          (define num (inexact->exact (floor (/ (- (syntax-e #'e) (syntax-e #'s)) (syntax-e #'val)))))
          (qq-art stx (rhythm #,@(build-list num (λ (_) #'val))))])])))
 
-(define-for-syntax (do-apply-rhythm stx exprs)
+(define-for-syntax (do-apply-rhythm stx r exprs)
 
   (with-syntax ([(result ...) 
     (for/list ([e exprs] [i (in-naturals)])
       #`[#,e #,(quasisyntax/loc stx (! #,i))])])
 
-    (qq-art stx
+    (qq-art r
       (@ ()
         (-- 0 result ...)
         ;; FIXME jagen TOTALLY UNSAFE (this will seq-ref in the surrounding context :'( )
@@ -257,35 +256,27 @@
   (λ (stx)
     (syntax-parse stx
       [(apply-rhythm* expr:number ...)
-       (do-apply-rhythm stx (syntax->list #'(expr ...)))])))
+       (do-apply-rhythm stx stx (syntax->list #'(expr ...)))])))
 
 (define-mapping-rewriter (apply-rhythm [(: rhythms rhythm)])
   (λ (stx r)
     (syntax-parse r
       [(_ expr:number ...)
-       (do-apply-rhythm stx (syntax->list #'(expr ...)))])))
+       (do-apply-rhythm stx r (syntax->list #'(expr ...)))])))
 
 ;; holes indicate spaces where objects should go.  They work well with rhythms.
 (define-art-object (hole []))
 
 (define-mapping-rewriter (fill-holes [(: h hole)])
   (λ (stx h)
-    (println "FILLING A HOLE")
-    (println (un-@ h))
-    (println (map un-@ (current-ctxt)))
     (syntax-parse stx
       [(_ head:id)
-       #:do[(println #'head) 
-            (define it (context-ref/surrounding (current-ctxt) (get-id-ctxt h) (decompile-reference #'head)))
+       #:do[(define it (context-ref/surrounding (current-ctxt) (get-id-ctxt h) (decompile-reference #'head)))
             (unless it (raise-syntax-error 'fill-holes (format "could not fill hole: ~s.  No ~s exists.  candidates: ~s" h #'head (context-ref* (current-ctxt) #'head))))]
-       (println (un-@ it))
        (qq-art h (@ () #,(delete-expr it) #,(delete-expr h) #,it))])))
 
 (define-mapping-rewriter (rhythm->holes [(: r rhythm)])
   (λ (stx r)
-    (println "RUNNING")
-    (println stx)
-    (println r)
     ;; cheeky implementation
     (syntax-parse r
       [(_ num:number ...)
@@ -364,7 +355,7 @@
        #:do [(define interp (free-id-table-ref interpretations #'interp*))]
        #:with (result ...) 
          (for/fold ([acc '()] #:result (reverse acc)) 
-                 ([expr (current-ctxt)])
+                   ([expr (filter (λ (expr) (context-within? (get-id-ctxt expr) (or (get-id-ctxt stx) '()))) (current-ctxt))])
            (syntax-parse expr
              [(head:id arg ...)
               #:do [(define new-expr (free-id-table-ref interp (compiled-from #'head) #f))]

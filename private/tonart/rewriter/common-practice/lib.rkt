@@ -100,10 +100,11 @@
        (begin
          (define-values (exprs deletes)
            (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2)))
-                     ([expr (current-ctxt)])
+                     ;; FIXME jagen
+                     ([expr (filter (λ (e) (context-within? (get-id-ctxt e) (get-id-ctxt expr))) (current-ctxt))])
              (syntax-parse expr
                [({~datum ^} ix:number)
-                (values (cons (qq-art expr (put (^ #,(add1 (modulo (sub1 (+ (syntax-e #'val) (syntax-e #'ix))) 8))))) acc1) (cons (delete-expr expr) acc2))]
+                (values (cons (qq-art expr (put (^ #,(+ (syntax-e #'val) (syntax-e #'ix))))) acc1) (cons (delete-expr expr) acc2))]
                [_ (values acc1 acc2)])))
          (append deletes exprs))
      #'(@ () result ...)])))

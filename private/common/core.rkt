@@ -227,9 +227,6 @@
                (define ctxt* (merge-coordinates (or (get-id-ctxt expr) '()) inner-ctxt ctxt))
                (set-id-ctxt inner-expr ctxt*)))
            (define evald (compile-rewrite-exprs coordinated '()))
-           (println "POCKET REWROTE")
-           (println evald)
-           (println ctxt)
            (compile-rewrite-exprs (cdr exprs) (append ctxt evald))]
           [(object:id arg ...)
            #:when (lookup #'object object/s?)
@@ -237,8 +234,6 @@
            (compile-rewrite-exprs (cons #'(put expr*) (cdr exprs)) ctxt)]
           [(realizer:id arg ...)
            #:when (lookup #'realizer rewriter/s?)
-           (println "HERE")
-           (println expr)
            (define realized (parameterize ([current-ctxt ctxt]) ((rewriter/s-body (lookup #'realizer)) expr)))
            (compile-rewrite-exprs (cons realized (cdr exprs)) ctxt)]
           [(unknown:id arg ...)

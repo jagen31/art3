@@ -49,13 +49,15 @@
   (music@ [(1 1) (9 1) (melody)] (instrument |Clarinet|))
   (music@ [(1 1) (9 1) (bass)] (instrument |Violin|))
 
+  (measure@ [1 10] (metric-interval->interval))
+
   ;; render things
   (i@ [0 100] 
-    (metric-interval->interval)
     ;; current context type: the-music, the-notes, instrument
     (expand-the-music) ; the-music -> (loop rhythm)
     (expand-the-notes) ; the-notes -> cool-melody-seq, punchy-4note-seq
     ;; => (loop rhythm), cool-melody-seq, punchy-4note-seq, instrument
+    (measure@ [1 10] (metric-interval->interval))
     (expand-cool-melody-seq) ; cool-melody-seq -> (seq note)
     (expand-punchy-4note-seq) ; punchy-4note-seq -> (seq note)
     ;; => (loop rhythm), (seq note), instrument

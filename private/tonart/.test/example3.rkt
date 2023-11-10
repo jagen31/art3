@@ -128,7 +128,7 @@ dic-tis.
 
 @chunk[<the-confutatis>
   (music@ [(4 4) (basses)]
-    #;(-- [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
+    (-- [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
         [5 (seq (note g 1 3) (note e 0 3)
                 (note c 0 4) (note a 0 3) (note c 0 4) (note a 0 3) 
                 (note g 1 3) (note e 0 3))])
