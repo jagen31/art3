@@ -10,6 +10,9 @@
 (define rev-circle (cycle '(b e a d g c f)))
 (define line (cycle '(c d e f g a b)))
 
+;; FIXME jagen unsafe (invalid pitch causes infinite loop!! :O )
+(define (distance-above-c pitch) (index-of line pitch))
+
 (define (transpose-by-interval pitch accidental num type)
   (define line* (drop (index-of line pitch) line))
   (define pitch* (first (drop (sub1 num) line*)))

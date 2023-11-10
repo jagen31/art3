@@ -63,8 +63,11 @@ auto |@(car iname) = sampler->AddSamplerChannel();
 
 (define-subperformer linuxsampler-midi-subperformer
   (λ(ctxt*)
-    (define imap (syntax-parse (context-ref ctxt* #'instrument-map) [(_ map ...) (syntax->datum #'(map ...))]))
-    (define ctxt (sort ctxt* < #:key (λ (stx) (syntax-parse (context-ref (get-id-ctxt stx) #'instant) [(_ result) (syntax-e #'result)]))))
+    (define imap* (context-ref ctxt* #'instrument-map))
+    (unless imap* (raise-syntax-error 'midi-subperformer "no instrument map in context"))
+    (define imap (syntax-parse imap* [(_ map ...) (syntax->datum #'(map ...))]))
+    (define ctxt (sort ctxt* < 
+      #:key (λ (stx) (println stx) (syntax-parse (context-ref (get-id-ctxt stx) #'instant) [(_ result) (syntax-e #'result)]))))
     (for/foldr ([acc '()])
                ([stx ctxt])
       (syntax-parse stx
@@ -75,8 +78,8 @@ auto |@(car iname) = sampler->AddSamplerChannel();
          (define switch (context-ref (get-id-ctxt stx) #'switch))
          (unless instrument (raise-syntax-error 'midi-subperformer "no instrument in context for midi" stx))
          (unless tempo (raise-syntax-error 'midi-subperformer "no tempo in context for midi" stx))
-         (unless instrument (raise-syntax-error 'midi-subperformer (format "this performer requires an instant for all midis, got: ~s" (un-@ stx)) stx))
-         (unless tempo (raise-syntax-error 'midi-subperformer (format "this performer requires a switch for all midis, got: ~s" (un-@ stx)) stx))
+         (unless instant (raise-syntax-error 'midi-subperformer (format "this performer requires an instant for all midis, got: ~s" (un-@ stx)) stx))
+         (unless switch (raise-syntax-error 'midi-subperformer (format "this performer requires a switch for all midis, got: ~s" (un-@ stx)) stx))
          (syntax-parse #`(#,instrument #,tempo #,instant #,switch)
            [((_ instrument-name:id) (_ tempo*:number) (_ time) (_ on?))
             (define instrument-name* (syntax-e #'instrument-name))

@@ -23,6 +23,7 @@
            (syntax-parse expr
              [({~datum !} value:number)
                (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
+               (println (map un-@ (current-ctxt)))
                (unless items 
                  (define msg (format "no seq in context for ref. ref: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
                  (raise-syntax-error 'seq-ref msg expr))
@@ -89,13 +90,13 @@
               (filter (λ (expr) 
                 (syntax-parse expr
                   [(head*:id _ (... ...))
-                   (free-identifier=? #'head* #'head)]))
+                   (and (free-identifier=? #'head* #'head) (context-within? (get-id-ctxt expr) (get-id-ctxt stx)))]))
                 (current-ctxt))]]))
     #'(define-syntax name
         (rewriter/s 
           (λ (stx)
             (define head-name binding-clause) ...
-            (body stx head-name ...))))))
+            #`(@ () #,(body stx head-name ...)))))))
           
 (define-syntax (define-mapping-rewriter stx)
   (syntax-parse stx 
@@ -105,10 +106,8 @@
           (with-syntax ([(result (... ...))
             (append
               (for/list ([melody melodies]) (delete-expr melody))
-              (for/list ([melody melodies]) 
-                (parameterize ([current-ctxt (filter (λ(expr) (context-within? (get-id-ctxt expr) (get-id-ctxt melody))) (current-ctxt))])
-                  (body stx melody))))])
-            #'(@ () result (... ...)))))]))
+              (for/list ([melody melodies]) (body stx melody)))])
+            #`(@ () result (... ...)))))]))
 
 (define-syntax (define-simple-rewriter stx)
   (syntax-parse stx 
@@ -212,7 +211,7 @@
            #`[#,size expr ...])
        (qq-art this-syntax (-- 0 result ...))]
       [_ (error 'expand-loop "oops")])))
-  
+
 
 (define-rewriter translate
   (syntax-parser
@@ -265,6 +264,37 @@
     (syntax-parse r
       [(_ expr:number ...)
        (do-apply-rhythm stx (syntax->list #'(expr ...)))])))
+
+;; holes indicate spaces where objects should go.  They work well with rhythms.
+(define-art-object (hole []))
+
+(define-mapping-rewriter (fill-holes [(: h hole)])
+  (λ (stx h)
+    (println "FILLING A HOLE")
+    (println (un-@ h))
+    (println (map un-@ (current-ctxt)))
+    (syntax-parse stx
+      [(_ head:id)
+       #:do[(println #'head) 
+            (define it (context-ref/surrounding (current-ctxt) (get-id-ctxt h) (decompile-reference #'head)))
+            (unless it (raise-syntax-error 'fill-holes (format "could not fill hole: ~s.  No ~s exists.  candidates: ~s" h #'head (context-ref* (current-ctxt) #'head))))]
+       (println (un-@ it))
+       (qq-art h (@ () #,(delete-expr it) #,(delete-expr h) #,it))])))
+
+(define-mapping-rewriter (rhythm->holes [(: r rhythm)])
+  (λ (stx r)
+    (println "RUNNING")
+    (println stx)
+    (println r)
+    ;; cheeky implementation
+    (syntax-parse r
+      [(_ num:number ...)
+       #:with r* r
+       #:with (hole* ...) 
+         (build-list (length (syntax->list #'(num ...))) (λ (_) #'(hole)))
+       #:with hole-seq #'(seq hole* ...)
+       #:with app #'(apply-rhythm)
+       (qq-art r (pocket-rewrite hole-seq r* app))])))
 
 (define-art-object (divisions [n]))
 
@@ -324,9 +354,6 @@
        (free-id-table-update! interpretations #'name 
          (λ (current) (free-id-table-set! current iname (qq-art #'iname (@ () #,@bodies))) current)
          (λ () (make-free-id-table))))
-     (println
-       #'(begin
-           (define-art-object (iname* [])) ...))
      #'(begin
          (define-art-object (iname* [])) ...)]))
 

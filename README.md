@@ -71,3 +71,9 @@ Christmas.
 
 ## Project structure
 
+...
+
+## TODO
+
+- Fix the strange quasiquote unquote problem in rewriters (workaround is to use `with-syntax` instead.  which is probably better practice anyhow)
+- Figure out a better way to do bindings for rewriters (use `syntax-spec` better)

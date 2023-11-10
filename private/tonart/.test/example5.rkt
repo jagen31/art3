@@ -18,33 +18,8 @@ The comp has a syncopated rhythm and a harmony, and the melody is just constant 
 
 (the harmony is specified in 'harmonic relativity', if you've never seen it.  It indicates- starting 
 on a major chord, jump a major 7th and play another major chord.  Then jump a minor 7th and play another 
-major chord.  Note- you'll actually be jumping the inverse- so a minor 2nd and a major 2nd.
-Just for clarity, the exact chords are going to end up E major, Eb major, Db major)
-
-Here is a quick utility which will establish the starting chord of the comp and the key of the melody.
-It is a polytonal jam, the starting chord of the comp is a diminshed 4th from the key, but the home
-key of the comp is really a 5th away, which sounds far less crazy.  Concretely, if melody key = Ab
-then comp starting pitch = E and comp key/final chord = Db.
-
-@chunk[<the-definitions>
-  ;; the object
-  (define-art-object (related-key+starting-pitch [key-voice pitch-voice]))
-  ;; the interpretation of the object
-  (define-mapping-rewriter (x-related-key+starting-pitch [(: expr related-key+starting-pitch)])
-    (λ (stx expr)
-      ;; the rewriter provides the starting key, the object provides the voices
-      (syntax-parse (list stx expr)
-        [((_ key-pitch:id key-accidental:number) (_ key-voice pitch-voice))
-         (define p+a 
-           (transpose-by-interval (syntax-e #'key-pitch) (syntax-e #'key-accidental) 5 'augmented))
-         (define-values (p* a*) (values (car p+a) (cadr p+a)))
-
-         (with-syntax ([p p*] [a a*])
-           (qq-art stx
-             (|@| () 
-               (ss@ (pitch-voice) (pitch p a))
-               (ss@ (key-voice) (key key-pitch key-accidental)))))])))
-]
+major chord.  Note- in practice you'll actually be jumping the inverse- so a minor 2nd and a major 2nd.
+Just for clarity, the exact chords I was mainly practicing with were E major, Eb major, Db major)
 
 Here is the jam:
 
@@ -52,16 +27,44 @@ Here is the jam:
   (interpretation+ main
     [the-composition
       (measure@ (1 2)
-        (related-key+starting-pitch right-hand left-hand)
+        (key+starting-chord-related-by-aug-5th right-hand left-hand)
         (ss@ (left-hand) (the-comp-harmony) (the-comp-rhythm))
         (ss@ (right-hand) (the-melody-rhythm))
         (run-interpretation main))])]
+
+`key+starting-chord-related-by-aug-5th` is obviously not a standard library function, it is something 
+specific to our composition.  It indicates that the key of the melody is related to the starting chord 
+of the comp by an augmented 5th.  The jam is polytonal, but the home key of the comp is really just a 
+perfect 4th away from the melody key, which is less crazy sounding.  Concretely, if melody key = Ab
+then comp starting chord = E (A5) and comp key/final chord = Db (P4).
+
+
+@chunk[<the-definitions>
+  ;; the object
+  (define-art-object (key+starting-chord-related-by-aug-5th [key-voice chord-voice]))
+  ;; the interpretation of the object
+  (define-mapping-rewriter (->key+starting-chord [(: expr key+starting-chord-related-by-aug-5th)])
+    (λ (stx expr)
+      ;; the rewriter provides the starting key, the object provides the voices
+      (syntax-parse (list stx expr)
+        [((_ key-pitch:id key-accidental:number) (_ key-voice chord-voice))
+         (define p+a 
+           (transpose-by-interval (syntax-e #'key-pitch) (syntax-e #'key-accidental) 5 'augmented))
+         (define-values (p* a*) (values (car p+a) (cadr p+a)))
+
+         (with-syntax ([p p*] [a a*])
+           (qq-art stx
+             (|@| () 
+               (ss@ (chord-voice) (pitch p a))
+               (ss@ (key-voice) (key key-pitch key-accidental)))))])))
+]
 
 This is the official composition, everything before is considered scaffolding or composite parts.
 Everything after is moving us towards a specific realization of the composition, either as a score,
 or as a computer performance.  Oh, or a practice exercise.
 
-Here is the version to perform off of, which is specified to be in Ab/Db.
+Here is the version to perform off of, which rewrites the composition slightly and specifies it to be 
+in Ab/Db.
 
 @chunk[<the-music>
   (interpretation+ main
@@ -69,18 +72,60 @@ Here is the version to perform off of, which is specified to be in Ab/Db.
       (measure@ (1 2)
         (the-composition)
         (run-interpretation main)
-        (x-related-key+starting-pitch a -1)
-        (relative-harmony->chord-seq)
-        (ss@ (left-hand) (apply-rhythm* 4 1.5 2.5)))])
-]
+        ;; it's in a flat! (and d flat)
+        (->key+starting-chord a -1)
+        (ss@ (left-hand) 
+          (relative-harmony->chord-seq)
+          (apply-rhythm* 4 1.5 2.5)))])]
 
-Here are a couple useful exercises to work up to it:
+Here is a further version which can be compiled directly into code to run on the sampler.
 
 @chunk[<the-music>
   (interpretation+ main
-    [the-subjam1
-      (measure@ (1 2)
-        (the-harmony) (rhythm 2 2 4))])]
+    [the-composition-for-computer-perf
+      (measure@ (1 8)
+
+        #;(i@ [0 32] (loop 8 (the-composition-for-perf)))
+        #;(expand-loop)
+        (the-composition-for-perf)
+        (run-interpretation main)
+
+        (ss@ (left-hand) 
+          ;; map the chords to the comp rhythm.
+          (rhythm->holes)
+          (fill-holes chord)
+          ;; write out the chords as notes
+          (chord->notes/simple 3))
+
+        ;; midi things
+        (note->midi)
+        (instrument-map [organ . 000/000_Montre_8])
+        (ss@ (left-hand) (instrument organ))
+        (tempo 120)
+
+        ;; convert measure intervals to raw beat intervals
+        (metric-interval->interval)
+        ;; convert to on/off events
+        (d/dt))])]
+
+@chunk[<the-definitions>
+  (define-mapping-rewriter (chord->notes/simple [(: crd chord)])
+    (λ (stx crd)
+      (syntax-parse stx
+        [(_ octave*:number)
+         (syntax-parse crd
+           [(_ root accidental mode)
+            #:do[ 
+              (define octave (syntax-e #'octave*))
+              (define pcs (generate-chord (syntax-e #'root) (syntax-e #'accidental) (syntax-e #'mode)))
+              (define cdis (distance-above-c (caar pcs)))]
+            #:with (result ...)
+              (for/list ([pc pcs])
+                (with-syntax ([p (first pc)] 
+                              [a (second pc)] 
+                              [o (if (>= (distance-above-c (first pc)) cdis) octave (add1 octave))])
+                  (qq-art crd (note p a o))))
+            #'(|@| () result ...)])])))]
 
 @chunk[<*>
   (require "../../common/core.rkt" "../../common/stdlib.rkt" 
@@ -97,7 +142,14 @@ Here are a couple useful exercises to work up to it:
 
   <the-definitions>
   <the-music>
+  (displayln (perform quote-performer (put (the-composition-for-computer-perf)) (run-interpretation main)))
 
-  (perform quote-performer
-    (put (the-composition-for-perf))
-    (run-interpretation main))]
+  (define result 
+    (perform linuxsampler-performer 
+      (put (the-composition-for-computer-perf))
+      (run-interpretation main)))
+       
+  (define file (open-output-file "private/tonart/realizer/electronic/linuxsampler/.test/test.cpp" 
+                                   #:exists 'replace))
+  (displayln result file)
+  (close-output-port file)]

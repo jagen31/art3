@@ -50,7 +50,8 @@
   (music@ [(1 1) (9 1) (bass)] (instrument |Violin|))
 
   ;; render things
-  (i@ [0 32] 
+  (i@ [0 100] 
+    (metric-interval->interval)
     ;; current context type: the-music, the-notes, instrument
     (expand-the-music) ; the-music -> (loop rhythm)
     (expand-the-notes) ; the-notes -> cool-melody-seq, punchy-4note-seq
@@ -58,7 +59,6 @@
     (expand-cool-melody-seq) ; cool-melody-seq -> (seq note)
     (expand-punchy-4note-seq) ; punchy-4note-seq -> (seq note)
     ;; => (loop rhythm), (seq note), instrument
-    (metric-interval->interval)
     (expand-loop) ; (loop A) -> A
     ;; => rhythm, (seq note), instrument
     (apply-rhythm) ; (@ [(seq A)] rhythm) -> A 

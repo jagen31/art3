@@ -221,7 +221,6 @@
 
 (define-mapping-rewriter (relative-harmony->chord-seq [(: harm relative-harmony)])
   (λ (stx harm)
-    (println (map un-@ (current-ctxt)))
     (syntax-parse harm
       [(_ harmony ...)
        (define start-pitch (context-ref/surrounding (current-ctxt) (get-id-ctxt harm) #'pitch))
@@ -230,14 +229,10 @@
          [(_ p*:id a*:number)
           #:do
             [(define pitch (map syntax-e (list #'p* #'a*))) 
-             (define-values (chord-types transitions) (odd-even-list (syntax->datum #'(harmony ...))))
-             (println chord-types)
-             (println transitions)]
+             (define-values (chord-types transitions) (odd-even-list (syntax->datum #'(harmony ...))))]
           #:with (chords ...)
             (for/fold ([chords '()] [pitch pitch] #:result (reverse chords)) 
                       ([chord-type chord-types] [transition (cons '(P 1) transitions)])
-              (println transition)
               (define new-pitch (transpose-by-interval (first pitch) (second pitch) (second transition) (first transition)))
-              (println new-pitch)
               (values (cons #`(chord #,(first new-pitch) #,(second new-pitch) #,chord-type) chords) new-pitch))
           (qq-art harm (seq chords ...))])])))
