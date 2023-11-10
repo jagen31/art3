@@ -1,5 +1,9 @@
 #lang scribble/lp2
 
+@(require scribble/manual)
+ 
+@title[#:style manual-doc-style]{Digital Doug}
+
 OK, here is a jam that I came up with today.  It was designed as both a mood lifter and an etude so I could
 develop better hand independence, especially with syncopation in the left hand.  In this file I'm going
 to lay out the main elements of it, show some 'subjams' I needed to learn to work up to it, and show
@@ -9,9 +13,11 @@ Here are the main elements:
 
 @chunk[<the-music>
   (interpretation+ main
+
     [the-comp-rhythm (rhythm 1.5 1 1 0.5 1 0.5 2.5)]
     [the-comp-harmony 
       (relative-harmony M [M 7] M [m 7] M)]
+
     [the-melody-rhythm (i@ [0 8] (uniform-rhythm 0.5))])]
 
 The comp has a syncopated rhythm and a harmony, and the melody is just constant eighth notes.
@@ -32,7 +38,7 @@ Here is the jam:
         (ss@ (right-hand) (the-melody-rhythm))
         (run-interpretation main))])]
 
-`key+starting-chord-related-by-aug-5th` is obviously not a standard library function, it is something 
+`key+starting-chord-related-by-aug-5th` is obviously not a standard library rewriter, it is something 
 specific to our composition.  It indicates that the key of the melody is related to the starting chord 
 of the comp by an augmented 5th.  The jam is polytonal, but the home key of the comp is really just a 
 perfect 4th away from the melody key, which is less crazy sounding.  Concretely, if melody key = Ab
@@ -76,9 +82,14 @@ in Ab/Db.
         (->key+starting-chord a -1)
         (ss@ (left-hand) 
           (relative-harmony->chord-seq)
+          ;; this applies the given rhythm directly to a seq in the score, as opposed to the usual 
+          ;; `apply-rhythm`, which applies a rhythm in the score to a seq in the score.
           (apply-rhythm* 4 1.5 2.5)))])]
 
-Here is a further version which can be compiled directly into code to run on the sampler.
+Here is a further refinement which can be compiled directly into code to run on the sampler.  It loops
+the composition 8 times (16 measures) and plays a arbitrary 4 measure melody, transposing it down 1 
+diatonic step each time.  Note that none of this is part of the composition, it's just one way to
+realize it [[ and it's not a very good way! :) ]].
 
 @chunk[<the-music>
   (interpretation+ main
@@ -122,6 +133,8 @@ Here is a further version which can be compiled directly into code to run on the
         (metric-interval->interval)
         ;; convert to on/off events
         (d/dt))])]
+
+Here is chord->notes/simple which I might move to the standard library... in a more useful form.
 
 @chunk[<the-definitions>
   (define-mapping-rewriter (chord->notes/simple [(: crd chord)])
