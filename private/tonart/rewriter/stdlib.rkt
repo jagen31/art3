@@ -11,7 +11,7 @@
 (define-art-object (tempo [bpm]))
 (define-art-object (instrument [name]))
 
-(define-rewriter m@
+(define-rewriter musi@
   (λ (stx)
     (syntax-parse stx
       [(_ [start*:number end*:number (voice:id ...)] expr ...)

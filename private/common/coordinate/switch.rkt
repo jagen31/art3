@@ -4,13 +4,13 @@
 (provide (all-defined-out))
 
 ;;;;;;;;;;; SWITCH COORDINATE THINGS
-(begin-for-syntax
-  (define (merge-switch l r)
+(define-hom-merge-rule switch 
+  (λ (l r _ __ ___)
     (let/ec break
       (unless l (break r))
       (unless r (break l))
-      (error 'merge-switch "oops, cannot merge switches")))
+      (error 'merge-switch "oops, cannot merge switches"))))
   
-  (define (switch-within? l r) #t))
+(define-hom-within?-rule switch (λ (l r _ __ ___) #t))
 
-(define-coordinate (switch [type] merge-switch switch-within?))
+(define-coordinate (switch [type]))

@@ -56,24 +56,35 @@ auto |@(car iname) = sampler->AddSamplerChannel();
 |@(car iname)->GetEngineChannel()->LoadInstrument();
   
 }|) "\n")
+ std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 |@(string-join note-statements "\n")
+ std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
 }|))))]))
 
 
 (define-subperformer linuxsampler-midi-subperformer
   (λ(ctxt*)
-    (define imap (syntax-parse (context-ref ctxt* #'instrument-map) [(_ map ...) (syntax->datum #'(map ...))]))
-    (define ctxt (sort ctxt* < #:key (λ (stx) (syntax-parse (context-ref (get-id-ctxt stx) #'instant) [(_ result) (syntax-e #'result)]))))
+    (define imap* (context-ref ctxt* #'instrument-map))
+    (unless imap* (raise-syntax-error 'midi-subperformer "no instrument map in context"))
+    (define imap (syntax-parse imap* [(_ map ...) (syntax->datum #'(map ...))]))
+    (define ctxt (sort ctxt* < 
+      #:key (λ (stx) (syntax-parse (context-ref (get-id-ctxt stx) #'instant) [(_ result) (syntax-e #'result)]))))
     (for/foldr ([acc '()])
                ([stx ctxt])
+
+
       (syntax-parse stx
         [({~datum midi} num:number) 
          (define instrument (context-ref/surrounding ctxt (get-id-ctxt stx) #'instrument))
          (define tempo (context-ref/surrounding ctxt (get-id-ctxt stx) #'tempo))
-         (unless instrument (raise-syntax-error 'midi-subperformer "no instrument in context for midi" stx))
+         (define instant (context-ref (get-id-ctxt stx) #'instant))
+         (define switch (context-ref (get-id-ctxt stx) #'switch))
+         (unless instrument (raise-syntax-error 'midi-subperformer (format "no instrument in context for midi: ~s" (un-@ stx)) stx))
          (unless tempo (raise-syntax-error 'midi-subperformer "no tempo in context for midi" stx))
-         (syntax-parse #`(#,instrument #,tempo #,(context-ref (get-id-ctxt stx) #'instant) #,(context-ref (get-id-ctxt stx) #'switch))
+         (unless instant (raise-syntax-error 'midi-subperformer (format "this performer requires an instant for all midis, got: ~s" (un-@ stx)) stx))
+         (unless switch (raise-syntax-error 'midi-subperformer (format "this performer requires a switch for all midis, got: ~s" (un-@ stx)) stx))
+         (syntax-parse #`(#,instrument #,tempo #,instant #,switch)
            [((_ instrument-name:id) (_ tempo*:number) (_ time) (_ on?))
             (define instrument-name* (syntax-e #'instrument-name))
             (cons #`(list 

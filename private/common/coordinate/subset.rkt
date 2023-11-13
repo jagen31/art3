@@ -4,8 +4,8 @@
 (provide (all-defined-out))
 
 ;;;;;;;;;;; SUBSET COORDINATE THINGS
-(begin-for-syntax
-  (define (merge-subset l r)
+(define-hom-merge-rule subset 
+  (λ (l r __ ___ ____)
     (let/ec break
       (unless l (break r))
       (unless r (break l))
@@ -16,9 +16,10 @@
            (free-id-set->list (immutable-free-id-set (append (syntax->list #'(item ...)) (syntax->list #'(item* ...)))))
          (qq-art l (subset result ...))]
         [_ 
-         (error 'oops "whoops")])))
+         (error 'oops "whoops")]))))
   
-  (define (subset-within? l r)
+(define-hom-within?-rule subset
+  (λ (l r __ ___ ____)
     (let/ec break
       (unless r (break #t))
       (unless l (break #f))
@@ -26,4 +27,4 @@
         [((_ item:id ...) (_ item*:id ...))
          (free-id-subset? (immutable-free-id-set (syntax->list #'(item* ...))) (immutable-free-id-set (syntax->list #'(item ...))))]))))
 
-(define-coordinate (subset [] merge-subset subset-within?))
+(define-coordinate (subset []))

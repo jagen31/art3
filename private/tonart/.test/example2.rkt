@@ -2,20 +2,20 @@
 
 (require "../../common/core.rkt" "../../common/stdlib.rkt" 
          "../../common/coordinate/interval.rkt" "../../common/coordinate/subset.rkt" 
-         "../stdlib.rkt" "../common-practice/lib.rkt" "../computer/lib.rkt" "../organ/hymn.rkt"
+         "../rewriter/stdlib.rkt" "../rewriter/common-practice/lib.rkt" "../realizer/electronic/rsound/lib.rkt" "../rewriter/church/hymn.rkt"
   rsound (for-syntax syntax/parse))
 
 
 ;; this is the actual composition
 (define-simple-rewriter the-music expand-the-music
   (ss@ (melody) 
-    (-- 0 
-      [16 (repeat 8 (rhythm .5 .5 .5 .5 1 1 .5 .5 .5 .5 2))] 
+    (--
+      [16 (loop 8 (rhythm .5 .5 .5 .5 1 1 .5 .5 .5 .5 2))] 
       ;; variety is the spice of life
-      [16 (repeat 8 (rhythm 1 1 .5 .5 .5 .5 .25 .25 1 0.5 2))]))
-  (m@ [0 32 (bass)] 
+      [16 (loop 8 (rhythm 1 1 .5 .5 .5 .5 .25 .25 1 0.5 2))]))
+  (music@ [(1 1) (9 1) (bass)] 
     ;; ... but not in the bass
-    (repeat 8 (rhythm 2 2 2 2))))
+    (loop 8 (rhythm 2 2 2 2))))
 
 
 ;; these are example sequences i have in mind. the sequences gotta have the same
@@ -32,8 +32,8 @@
 ;; just a logical organization
 (define-simple-rewriter the-notes expand-the-notes
   ;; the notes to use
-  (m@ [0 32 (melody)] (cool-melody-seq))
-  (m@ [0 32 (bass)] (punchy-4note-seq)))
+  (music@ [(1 1) (9 1) (melody)] (cool-melody-seq))
+  (music@ [(1 1) (9 1) (bass)] (punchy-4note-seq)))
 
 (define sound
   (perform 
@@ -46,25 +46,29 @@
 
   ;; we'll render these as midi, which requires an instrument specified.
   ;; the instruments to use:
-  (m@ [0 32 (melody)] (instrument |Tromp. en chamade|))
-  (m@ [0 32 (bass)] (instrument |Krummhorn 8|))
+  (music@ [(1 1) (9 1) (melody)] (instrument |Clarinet|))
+  (music@ [(1 1) (9 1) (bass)] (instrument |Violin|))
+
+  #;(measure@ [1 10] (metric-interval->interval))
 
   ;; render things
-  (i@ [0 32] 
+  (i@ [0 100] 
     ;; current context type: the-music, the-notes, instrument
-    (expand-the-music) ; the-music -> (repeat rhythm)
+    (expand-the-music) ; the-music -> (loop rhythm)
     (expand-the-notes) ; the-notes -> cool-melody-seq, punchy-4note-seq
-    ;; => (repeat rhythm), cool-melody-seq, punchy-4note-seq, instrument
+    ;; => (loop rhythm), cool-melody-seq, punchy-4note-seq, instrument
+    (measure@ [1 10] (metric-interval->interval))
     (expand-cool-melody-seq) ; cool-melody-seq -> (seq note)
     (expand-punchy-4note-seq) ; punchy-4note-seq -> (seq note)
-    ;; => (repeat rhythm), (seq note), instrument
-    (expand-repeat) ; (repeat A) -> A
+    ;; => (loop rhythm), (seq note), instrument
+    (expand-loop) ; (loop A) -> A
     ;; => rhythm, (seq note), instrument
     (apply-rhythm) ; (@ [(seq A)] rhythm) -> A 
     ;; => note, (seq note), instrument
     (note->midi) ; note -> midi
     ;; => midi, (seq note), instrument
     ;; performer will ignore the seq. midi is present w/ instrument and will be performed QED
+    (tempo 120)
     )))
 
 (set-output-device! 1)
