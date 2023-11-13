@@ -34,15 +34,17 @@
 (define-hom-merge-rule interval
   (λ (l r __ ___ ____) (do-merge-interval l r)))
 
+(define-for-syntax (do-interval-within? l r)
+  (let/ec break
+    (unless r (break #t))
+    (unless l (break #f))
+    (syntax-parse #`(#,l #,r)
+      #:datum-literals [start end]
+      [((_ (start s1*:number) (end e1*:number)) (_ (start s2*:number) (end e2*:number)))
+       (define-values (s1 e1 s2 e2) (values (syntax-e #'s1*) (syntax-e #'e1*) (syntax-e #'s2*) (syntax-e #'e2*)))
+       (and (>= s1 s2) (<= e1 e2))])))
+
 (define-hom-within?-rule interval
-  (λ (l r)
-    (let/ec break
-      (unless r (break #t))
-      (unless l (break #f))
-      (syntax-parse #`(#,l #,r)
-        #:datum-literals [start end]
-        [((_ (start s1*:number) (end e1*:number)) (_ (start s2*:number) (end e2*:number)))
-         (define-values (s1 e1 s2 e2) (values (syntax-e #'s1*) (syntax-e #'e1*) (syntax-e #'s2*) (syntax-e #'e2*)))
-         (and (>= s1 s2) (<= e1 e2))]))))
+  (λ (l r _ __ ___) (do-interval-within? l r)))
 
 (define-coordinate (interval [start end]))

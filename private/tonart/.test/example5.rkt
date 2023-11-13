@@ -18,9 +18,9 @@ Here are the main elements:
     [the-comp-harmony 
       (relative-harmony M [M 7] M [m 7] M)]
 
-    [the-melody-rhythm (i@ [0 8] (uniform-rhythm 0.5))])]
+    [the-solo-rhythm (i@ [0 8] (uniform-rhythm 0.5))])]
 
-The comp has a syncopated rhythm and a harmony, and the melody is just constant eighth notes.
+The comp has a syncopated rhythm and a harmony, and the solo is just constant eighth notes.
 
 (the harmony is specified in 'harmonic relativity', if you've never seen it.  It indicates- starting 
 on a major chord, jump a major 7th and play another major chord.  Then jump a minor 7th and play another 
@@ -35,13 +35,13 @@ Here is the jam:
       (i@ (0 8)
         (key+starting-chord-related-by-aug-5th right-hand left-hand)
         (ss@ (left-hand) (the-comp-harmony) (the-comp-rhythm))
-        (ss@ (right-hand) (the-melody-rhythm))
+        (ss@ (right-hand) (the-solo-rhythm))
         (run-interpretation main))])]
 
 `key+starting-chord-related-by-aug-5th` is obviously not a standard library rewriter, it is something 
-specific to our composition.  It indicates that the key of the melody is related to the starting chord 
+specific to our composition.  It indicates that the key of the solo is related to the starting chord 
 of the comp by an augmented 5th.  The jam is polytonal, but the home key of the comp is really just a 
-perfect 4th away from the melody key, which is less crazy sounding.  Concretely, if melody key = Ab
+perfect 4th away from the solo key, which is less crazy sounding.  Concretely, if solo key = Ab
 then comp starting chord = E (A5) and comp key/final chord = Db (P4).
 
 
@@ -109,8 +109,10 @@ realize it [[ and it's not a very good way! :) ]].
                 [8 (seq (^ 1) (^ 4) (^ 6) (^ 4) (^ 6) (^ 8) (^ 6) (^ 8) (^ 11) (^ 8) (^ 6) (^ 8) (^ 6) (^ 4) (^ 1) (^ 4))]))
           (expand-loop)
           (apply-rhythm)
-          (-- [16] [16 (transpose-diatonic -1)] [16 (transpose-diatonic -2)] [16 (transpose-diatonic -3)])
-          (run-transpose-diatonic))
+          (-- [16] [16 (transpose-diatonic 1)] [16 (transpose-diatonic -1)] [16])
+          (run-transpose-diatonic)
+          (apply-rhythm) (octave 5) (^->note))
+        
 
         (ss@ (left-hand) 
           ;; map the chords to the comp rhythm.
@@ -119,7 +121,6 @@ realize it [[ and it's not a very good way! :) ]].
           ;; write out the chords as notes
           (chord->notes/simple 3))
 
-        (ss@ (right-hand) (apply-rhythm) (octave 5) (^->note))
 
         ;; midi things
         (note->midi)

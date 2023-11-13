@@ -49,7 +49,7 @@
   (music@ [(1 1) (9 1) (melody)] (instrument |Clarinet|))
   (music@ [(1 1) (9 1) (bass)] (instrument |Violin|))
 
-  (measure@ [1 10] (metric-interval->interval))
+  #;(measure@ [1 10] (metric-interval->interval))
 
   ;; render things
   (i@ [0 100] 

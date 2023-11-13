@@ -6,18 +6,19 @@
 
 (define-art-object (st-flavian []))
 
+(define-rewriter scale-degree-seq
+  (λ (stx)
+    (syntax-parse stx
+      [(_ degree:number ...)
+       (qq-art stx (seq (^ degree) ...))])))
+
 (define-mapping-rewriter (st-flavian->notes [(: melodies st-flavian)])
   (λ (stx melody)
     (qq-art melody
-        (-- 0 [1 (note f 0 4)] 
-          [1 (note f 0 4)]  [1 (note e 0 4)]  [1 (note f 0 4)] [1 (note a 0 4)]
-          [1 (note g 0 4)]  [1 (note g 0 4)]  [1 (note f 0 4)] [1 (note f 0 4)]
-          [1 (note b -1 4)] [1 (note a 0 4)]  [1 (note f 0 4)] [1 (note g 0 4)]
-          [3 (note a 0 4)]                                     [1 (note a 0 4)]
-          [1 (note a 0 4)]  [1 (note b -1 4)] [1 (note c 0 5)] [1 (note a 0 4)]
-          [1 (note f 0 4)]  [1 (note g 0 4)]  [1 (note a 0 4)] [1 (note a 0 4)]
-          [1 (note g 0 4)]  [1 (note f 0 4)]  [1 (note f 0 4)] [1 (note e 0 4)]
-          [3 (note f 0 4)]))))
+      (pocket-rewrite
+        (scale-degree-seq 1 1 0 1 3 2 2 1 1 4 3 1 2 3 3 3 4 5 3 1 2 3 3 2 1 1 0 1)
+        (rhythm 1 1 1 1 1 1 1 1 1 1 1 1 1 3 1 1 1 1 1 1 1 1 1 1 1 1 1 3)
+        (apply-rhythm)))))
 
 (define-art-object (stuttgart []))
 

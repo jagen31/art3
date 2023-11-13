@@ -11,6 +11,6 @@
       (unless r (break l))
       (error 'merge-instant "oops, cannot merge instant for now"))))
   
-(define-hom-within?-rule within? (λ (l r) #t))
+(define-hom-within?-rule within? (λ (l r _ __ ___) #t))
 
 (define-coordinate (instant [type]))

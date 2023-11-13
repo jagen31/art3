@@ -101,7 +101,7 @@
          (define-values (exprs deletes)
            (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2)))
                      ;; FIXME jagen
-                     ([expr (filter (λ (e) (context-within? (get-id-ctxt e) (get-id-ctxt expr))) (current-ctxt))])
+                     ([expr (filter (λ (e) (context-within? (get-id-ctxt e) (get-id-ctxt expr) (current-ctxt))) (current-ctxt))])
              (syntax-parse expr
                [({~datum ^} ix:number)
                 (values (cons (qq-art expr (put (^ #,(+ (syntax-e #'val) (syntax-e #'ix))))) acc1) (cons (delete-expr expr) acc2))]
@@ -117,20 +117,21 @@
     (syntax-parse stx
       [(_ [(mstart* bstart*)] expr ...)
        ;; FIXME jagen fix this!!
-       (qq-art stx (mi@ [(mstart* bstart*) (+inf.0 4)] expr ...))]
+       (qq-art stx (mi@ [(mstart* bstart*) (+inf.0 +inf.0)] expr ...))]
       [(_ [(mstart* bstart*) (mend* bend*)] expr ...)
        (qq-art stx (@ [(metric-interval (start mstart* bstart*) (end mend* bend*))] expr ...))])))
 
 (define-rewriter measure@
   (λ(stx)
     (syntax-parse stx
-      [(_ [start:number end:number] expr ...) (qq-art stx (mi@ [(start 1) (end 4)] expr ...))])))
+      [(_ start:number expr ...) (qq-art stx (mi@ [(start 1)] expr ...))]
+      [(_ [start:number end:number] expr ...) (qq-art stx (mi@ [(start 1) (#,(add1 (syntax-e #'end)) 1)] expr ...))])))
 
 (define-rewriter music@
   (λ(stx)
     (syntax-parse stx
       [(_ [(measure:number beat:number) (voice:id ...)] expr ...) 
-       (qq-art stx (music@ [(measure beat) (+inf.0 4) (voice ...)] expr ...))]
+       (qq-art stx (music@ [(measure beat) (+inf.0 +inf.0) (voice ...)] expr ...))]
       [(_ [(mstart:number bstart:number) (mend:number bend:number) (voice:id ...)] expr ...)
        (qq-art stx (mi@ [(mstart bstart) (mend bend)] (ss@ (voice ...) expr ...)))])))
 
@@ -164,8 +165,8 @@
     [(_ (_ start*:number) (_ end*:number))
      (qq-art stx
        (metric-interval 
-         (start #,(add1 (floor (/ (syntax-e #'start*) 4))) #,(add1 (remainder (syntax-e #'start*) 4)))
-         (end #,(add1 (floor (/ (syntax-e #'end*) 4))) #,(add1 (remainder (syntax-e #'end*) 4)))))]
+         (start #,(add1 (floor (/ (syntax-e #'start*) 4))) #,(add1 (float-modulo (syntax-e #'start*) 4)))
+         (end #,(add1 (floor (/ (syntax-e #'end*) 4))) #,(add1 (float-modulo (syntax-e #'end*) 4)))))]
     [_ #f]))
 
 (module+ test
@@ -207,6 +208,14 @@
 (define-nonhom-merge-rule interval metric-interval #:keep-right
   (λ (l r l* _ ctxt)
     (do-merge-metric-interval (do-interval->metric-interval l ctxt) r)))
+
+(define-nonhom-within?-rule metric-interval interval
+  (λ (l r l* _ ctxt)
+    (do-interval-within? (do-metric-interval->interval l ctxt) r)))
+
+(define-nonhom-within?-rule interval metric-interval
+  (λ (l r l* _ ctxt)
+    (do-interval-within? l (do-metric-interval->interval r ctxt))))
 
 (define-art-object (chord [pitch accidental mode]))
 

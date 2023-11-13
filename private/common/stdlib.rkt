@@ -89,7 +89,7 @@
               (filter (λ (expr) 
                 (syntax-parse expr
                   [(head*:id _ (... ...))
-                   (and (free-identifier=? #'head* #'head) (context-within? (get-id-ctxt expr) (get-id-ctxt stx)))]))
+                   (and (free-identifier=? #'head* #'head) (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt)))]))
                 (current-ctxt))]]))
     #'(define-syntax name
         (rewriter/s 
@@ -129,7 +129,7 @@
        (define target
          (filter 
            (λ (expr) 
-             (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx))
+             (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt))
                   (syntax-parse expr
                     [(head:id _ ...) (free-identifier=? (compiled-from #'head) #'name)])))
            (current-ctxt)))
@@ -154,7 +154,7 @@
        (define coords (syntax->list #'(ss* ...)))
        (define target
          (filter 
-           (λ(expr) (context-within? (get-id-ctxt expr) (get-id-ctxt stx)))
+           (λ(expr) (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt)))
            (current-ctxt)))
        (with-syntax ([(target* ...)
          (for/list ([item target])
@@ -322,8 +322,7 @@
        (define target
          (filter 
            (λ (expr) 
-             (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx))
-                  (context-ref (get-id-ctxt expr) #'interval)))
+             (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt))))
            (current-ctxt)))
        (with-syntax ([(target* ...)
          (flatten
@@ -355,7 +354,7 @@
        #:do [(define interp (free-id-table-ref interpretations #'interp*))]
        #:with (result ...) 
          (for/fold ([acc '()] #:result (reverse acc)) 
-                   ([expr (filter (λ (expr) (context-within? (get-id-ctxt expr) (or (get-id-ctxt stx) '()))) (current-ctxt))])
+                   ([expr (filter (λ (expr) (context-within? (get-id-ctxt expr) (or (get-id-ctxt stx) '()) (current-ctxt))) (current-ctxt))])
            (syntax-parse expr
              [(head:id arg ...)
               #:do [(define new-expr (free-id-table-ref interp (compiled-from #'head) #f))]
@@ -363,3 +362,6 @@
               (cons (qq-art expr #,new-expr) (cons (delete-expr expr) acc))]
             [_ acc]))
        #`(@ () result ...)])))
+
+(define-for-syntax (float-modulo n m)
+  (- n (* (floor (/ n m)) m)))

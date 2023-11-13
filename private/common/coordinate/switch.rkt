@@ -11,6 +11,6 @@
       (unless r (break l))
       (error 'merge-switch "oops, cannot merge switches"))))
   
-(define-hom-within?-rule switch (λ (l r) #t))
+(define-hom-within?-rule switch (λ (l r _ __ ___) #t))
 
 (define-coordinate (switch [type]))

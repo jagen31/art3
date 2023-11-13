@@ -72,13 +72,15 @@ auto |@(car iname) = sampler->AddSamplerChannel();
       #:key (λ (stx) (syntax-parse (context-ref (get-id-ctxt stx) #'instant) [(_ result) (syntax-e #'result)]))))
     (for/foldr ([acc '()])
                ([stx ctxt])
+
+
       (syntax-parse stx
         [({~datum midi} num:number) 
          (define instrument (context-ref/surrounding ctxt (get-id-ctxt stx) #'instrument))
          (define tempo (context-ref/surrounding ctxt (get-id-ctxt stx) #'tempo))
          (define instant (context-ref (get-id-ctxt stx) #'instant))
          (define switch (context-ref (get-id-ctxt stx) #'switch))
-         (unless instrument (raise-syntax-error 'midi-subperformer "no instrument in context for midi" stx))
+         (unless instrument (raise-syntax-error 'midi-subperformer (format "no instrument in context for midi: ~s" (un-@ stx)) stx))
          (unless tempo (raise-syntax-error 'midi-subperformer "no tempo in context for midi" stx))
          (unless instant (raise-syntax-error 'midi-subperformer (format "this performer requires an instant for all midis, got: ~s" (un-@ stx)) stx))
          (unless switch (raise-syntax-error 'midi-subperformer (format "this performer requires a switch for all midis, got: ~s" (un-@ stx)) stx))

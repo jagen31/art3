@@ -12,8 +12,8 @@
   (struct coordinate/s [])
   (define current-ctxt (make-parameter '()))
   
-  (struct merge-rule/s [merge])
-  (struct within?-rule/s [within?])
+  (struct merge-rule/s [merge] #:transparent)
+  (struct within?-rule/s [within?] #:transparent)
 
   (define merge-rules (gvector))
   (define within?-rules (gvector)))
@@ -99,7 +99,7 @@
 (define-syntax (define-hom-merge-rule stx)
   (syntax-parse stx
     [(_ name:id body)
-     #'(begin-for-syntax (gvector-add! merge-rules 
+     #`(begin-for-syntax (gvector-add! merge-rules 
          (merge-rule/s (λ (l r ctxt) 
                          (define l* (context-ref l #'name))
                          (define r* (context-ref r #'name))
@@ -109,15 +109,24 @@
   (syntax-parse stx
     [(_ name:id body)
      #'(begin-for-syntax (gvector-add! within?-rules 
-         (within?-rule/s (λ (l r) 
+         (within?-rule/s (λ (l r ctxt) 
                            (define l* (context-ref l #'name))
                            (define r* (context-ref r #'name))
-                           (if (or l* r*) (body l* r*) #t)))))]))
+                           (if (and l* r*) (body l* r* l r ctxt) #t)))))]))
+
+(define-syntax (define-nonhom-within?-rule stx)
+  (syntax-parse stx
+    [(_ lname:id rname:id body) 
+     #`(begin-for-syntax (gvector-add! within?-rules 
+         (within?-rule/s (λ (l r ctxt) 
+                           (define l* (context-ref l #'lname))
+                           (define r* (context-ref r #'rname))
+                           (if (and l* r*) (body l* r* l r ctxt) #t)))))]))
 
 (define-coordinate (art-id []))
 ;; FIXME jagen this will never run
 (define-hom-merge-rule art-id (λ (l r _ __ ___) (or r (qq-art l (art-id #,(gensym))))))
-(define-hom-within?-rule art-id (λ (_ __) #t))
+(define-hom-within?-rule art-id (λ (l r _ __ ___) #t))
 
 (begin-for-syntax
   ;;;;;;;;;; CONTEXT THINGS
@@ -142,10 +151,10 @@
       (filter (λ(expr) (syntax-parse expr 
         [(head:id _ ...) 
          (and (free-identifier=? (compiled-from #'head) (decompile-reference name))
-              (context-within? coords (get-id-ctxt expr)))] 
+              (context-within? coords (get-id-ctxt expr) ctxt))] 
         [_ #f]))
       ctxt))
-    (and (not (empty? candidates)) (car (sort candidates (λ (l r) (context-within? (get-id-ctxt l) (get-id-ctxt r)))))))
+    (and (not (empty? candidates)) (car (sort candidates (λ (l r) (context-within? (get-id-ctxt l) (get-id-ctxt r) ctxt))))))
 
   (define (remove-from-ctxt ctxt k)
     (for/foldr ([acc '()]) 
@@ -170,8 +179,8 @@
   (define (merge-coordinates left right ctxt)
     (for/fold ([acc right]) ([merge-rule merge-rules]) ((merge-rule/s-merge merge-rule) left acc ctxt)))
 
-  (define (context-within? ctxt-l ctxt-r)
-    (for/and ([within?-rule within?-rules]) ((within?-rule/s-within? within?-rule) ctxt-l ctxt-r)))
+  (define (context-within? ctxt-l ctxt-r ctxt)
+    (for/and ([rule within?-rules]) ((within?-rule/s-within? rule) ctxt-l ctxt-r ctxt)))
 
 
   ;; utility function to generate a `delete-by-id` instruction for an expr

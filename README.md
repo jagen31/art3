@@ -80,3 +80,6 @@ Christmas.
 - ss@ -> voice@
 - Finish `metric-interval`/`interval` compatibility
 - Assess the viability of merge rules / within? rules.
+- Fix hyfrydol :((((
+- better support for infinite intervals (so you don't have to always provide an end)
+- possibly making stdlib coordinates into coordinate families

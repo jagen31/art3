@@ -36,7 +36,7 @@
 #;(displayln linuxsampler-string)
 #;(displayln musicxml-string)
 
-#;(define result 
+(define result 
   (perform music-rsound-performer 
 
     ;; the keys
@@ -52,15 +52,18 @@
            (note g 0 5) (note d 0 5) (note b 0 4) (note d 0 5) (note g 0 4))
       (apply-rhythm))
       
-    (musi@ [0 9 (melody)] (instrument |Yamaha Grand Piano|) (octave 4))
-    (musi@ [0 9 (accomp)] (instrument |Yamaha Grand Piano|) (octave 4))
+    (measure@ 1 (ss@ (melody)) (instrument |Yamaha Grand Piano|) (octave 4))
+    (measure@ 1 (ss@ (accomp)) (instrument |Yamaha Grand Piano|) (octave 4))
 
-    (i@ [0 9] (tempo 120) (expand-loop) (^->note) (note->midi))))
+    (measure@ 1 (tempo 120) (expand-loop) (^->note) (note->midi))))
 
-(define-simple-rewriter flammis-rhythm expand-flammis
+(set-output-device! 3)
+(play result)
+
+#;(define-simple-rewriter flammis-rhythm expand-flammis
     (-- [5 (rhythm 0.75 0.25 0.75 0.25 0.75 0.25 1 1)]))
 
-(perform quote-performer
+#;(perform quote-performer
   (i@ [0 24]
     (music@ [(4 4) (basses)]
       (-- [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
