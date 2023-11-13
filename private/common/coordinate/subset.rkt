@@ -19,7 +19,7 @@
          (error 'oops "whoops")]))))
   
 (define-hom-within?-rule subset
-  (λ (l r)
+  (λ (l r __ ___ ____)
     (let/ec break
       (unless r (break #t))
       (unless l (break #f))

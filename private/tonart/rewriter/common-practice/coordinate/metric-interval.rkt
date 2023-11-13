@@ -19,18 +19,17 @@
       #:datum-literals [start end]
       [((_ (start ms1*:number bs1*:number) (end me1*:number be1*:number)) (_ (start ms2*:number bs2*:number) (end me2*:number be2*:number)))
 
-       (define ms1 (syntax-e #'ms1*))
-       (define bs1 (syntax-e #'bs1*))
-       (define ms2 (syntax-parse #'ms2* [val:number (syntax-e #'val)] [_ #f]))
-       (define bs2 (syntax-parse #'bs2* [val:number (syntax-e #'val)] [_ #f]))
-
        (define (compute-offset m1 b1 m2 b2)
          (define m* (+ m1 m2 (- 2)))
          (define b* (+ b1 b2 (- 2)))
          (define m** (+ (floor (/ b* 4)) m*))
-         (define b** (modulo b* 4))
+         (define b** (float-modulo b* 4))
          (values (add1 m**) (add1 b**)))
 
+       (define ms1 (syntax-e #'ms1*))
+       (define bs1 (syntax-e #'bs1*))
+       (define ms2 (syntax-parse #'ms2* [val:number (syntax-e #'val)] [_ #f]))
+       (define bs2 (syntax-parse #'bs2* [val:number (syntax-e #'val)] [_ #f]))
 
        (define me2 (syntax-parse #'me2* [val:number (syntax-e #'val)] [_ #f]))
        (define be2 (syntax-parse #'be2* [val:number (syntax-e #'val)] [_ #f]))
@@ -59,8 +58,7 @@
 (define-hom-merge-rule metric-interval 
   (λ (l r _ __ ___) (do-merge-metric-interval l r)))
 
-(define-hom-within?-rule metric-interval-within? 
-  (λ (l r)
+(define-for-syntax (do-metric-interval-within? l r)
   (let/ec break
     (unless r (break #t))
     (unless l (break #f))
@@ -70,7 +68,10 @@
        (define-values (ms1 bs1 me1 be1 ms2 bs2 me2 be2) 
          (values (syntax-e #'ms1*) (syntax-e #'bs1*) (syntax-e #'me1*) (syntax-e #'be1*) 
                  (syntax-e #'ms2*) (syntax-e #'bs2*) (syntax-e #'me2*) (syntax-e #'be2*)))
-       (and (or (> ms1 ms2) (and (= ms1 ms2) (>= bs1 bs2)) (or (<= me1 me2) (and (= me1 me2) (<= be1 be2)))))]))))
+       (and (or (> ms1 ms2) (and (= ms1 ms2) (>= bs1 bs2))) (or (< me1 me2) (and (= me1 me2) (<= be1 be2))))])))
+
+(define-hom-within?-rule metric-interval
+  (λ (l r _ __ ___) (do-metric-interval-within? l r)))
  
 
 (define-coordinate (metric-interval [start end]))

@@ -12,8 +12,8 @@
   (struct coordinate/s [])
   (define current-ctxt (make-parameter '()))
   
-  (struct merge-rule/s [merge])
-  (struct within?-rule/s [within?])
+  (struct merge-rule/s [merge] #:transparent)
+  (struct within?-rule/s [within?] #:transparent)
 
   (define merge-rules (gvector))
   (define within?-rules (gvector)))
@@ -21,7 +21,6 @@
 (syntax-spec
   (binding-class art-performer)
   (binding-class art-object)
-  (binding-class art-id)
 
   (binding-class rewriter)
 
@@ -59,17 +58,17 @@
 
 (begin-for-syntax
 
-   ;;;;;;;; RENAMED REFERENCE THINGS
-   ;; FIXME jagen consider this harder
-    (define (compile-art-references stx)
-      (syntax-parse stx
-        [(exprs ...)
-         #:with (compiled ...) (map compile-art-references (syntax->list #'(exprs ...)))
-         (quasisyntax/loc stx (compiled ...))]
-        [ref:id 
-         ;; FIXME jagen how do you know if an id can be compiled?
-         (with-handlers ([(λ(x) #t) (λ(x) #'ref)]) (compile-reference #'ref))]
-        [_ stx]))
+  ;;;;;;;; RENAMED REFERENCE THINGS
+  ;; FIXME jagen consider this harder
+   (define (compile-art-references stx)
+     (syntax-parse stx
+       [(exprs ...)
+        #:with (compiled ...) (map compile-art-references (syntax->list #'(exprs ...)))
+        (quasisyntax/loc stx (compiled ...))]
+       [ref:id 
+        ;; FIXME jagen how do you know if an id can be compiled?
+        (with-handlers ([(λ(x) #t) (λ(x) #'ref)]) (compile-reference #'ref))]
+       [_ stx]))
 
   (define (decompile-reference ref)
     (with-handlers ([(λ(x) #t) (λ(x) ref)]) (compiled-from ref)))
@@ -100,7 +99,7 @@
 (define-syntax (define-hom-merge-rule stx)
   (syntax-parse stx
     [(_ name:id body)
-     #'(begin-for-syntax (gvector-add! merge-rules 
+     #`(begin-for-syntax (gvector-add! merge-rules 
          (merge-rule/s (λ (l r ctxt) 
                          (define l* (context-ref l #'name))
                          (define r* (context-ref r #'name))
@@ -110,15 +109,24 @@
   (syntax-parse stx
     [(_ name:id body)
      #'(begin-for-syntax (gvector-add! within?-rules 
-         (within?-rule/s (λ (l r) 
+         (within?-rule/s (λ (l r ctxt) 
                            (define l* (context-ref l #'name))
                            (define r* (context-ref r #'name))
-                           (if (or l* r*) (body l* r*) #t)))))]))
+                           (if (and l* r*) (body l* r* l r ctxt) #t)))))]))
 
-(define-coordinate (id []))
+(define-syntax (define-nonhom-within?-rule stx)
+  (syntax-parse stx
+    [(_ lname:id rname:id body) 
+     #`(begin-for-syntax (gvector-add! within?-rules 
+         (within?-rule/s (λ (l r ctxt) 
+                           (define l* (context-ref l #'lname))
+                           (define r* (context-ref r #'rname))
+                           (if (and l* r*) (body l* r* l r ctxt) #t)))))]))
+
+(define-coordinate (art-id []))
 ;; FIXME jagen this will never run
-(define-hom-merge-rule id (λ (l r _ __ ___) (or r (qq-art l (id #,(gensym))))))
-(define-hom-within?-rule id (λ (_ __) #t))
+(define-hom-merge-rule art-id (λ (l r _ __ ___) (or r (qq-art l (art-id #,(gensym))))))
+(define-hom-within?-rule art-id (λ (l r _ __ ___) #t))
 
 (begin-for-syntax
   ;;;;;;;;;; CONTEXT THINGS
@@ -132,7 +140,7 @@
   (define (add-to-id-ctxt stx expr) (syntax-property stx id-ctxt-prop (cons expr (syntax-property stx id-ctxt-prop))))
 
   (define (context-ref* ctxt name)
-    (filter (λ(expr) (syntax-parse expr [(head:id _ ...) (free-identifier=? (compiled-from #'head) name)] [_ #f])) ctxt))
+    (filter (λ(expr) (syntax-parse expr [(head:id _ ...) (free-identifier=? (compiled-from #'head) (decompile-reference name))] [_ #f])) ctxt))
   (define (context-ref ctxt name) 
     (define result (context-ref* ctxt name))
     (and (cons? result) (car result)))
@@ -142,11 +150,11 @@
     (define candidates
       (filter (λ(expr) (syntax-parse expr 
         [(head:id _ ...) 
-         (and (free-identifier=? (compiled-from #'head) name)
-              (context-within? coords (get-id-ctxt expr)))] 
+         (and (free-identifier=? (compiled-from #'head) (decompile-reference name))
+              (context-within? coords (get-id-ctxt expr) ctxt))] 
         [_ #f]))
       ctxt))
-    (and (not (empty? candidates)) (car (sort candidates (λ (l r) (context-within? (get-id-ctxt l) (get-id-ctxt r)))))))
+    (and (not (empty? candidates)) (car (sort candidates (λ (l r) (context-within? (get-id-ctxt l) (get-id-ctxt r) ctxt))))))
 
   (define (remove-from-ctxt ctxt k)
     (for/foldr ([acc '()]) 
@@ -171,21 +179,18 @@
   (define (merge-coordinates left right ctxt)
     (for/fold ([acc right]) ([merge-rule merge-rules]) ((merge-rule/s-merge merge-rule) left acc ctxt)))
 
-  (define (context-within? ctxt-l ctxt-r)
-    (for/and ([within?-rule within?-rules]) ((within?-rule/s-within? within?-rule) ctxt-l ctxt-r)))
+  (define (context-within? ctxt-l ctxt-r ctxt)
+    (for/and ([rule within?-rules]) ((within?-rule/s-within? rule) ctxt-l ctxt-r ctxt)))
 
 
   ;; utility function to generate a `delete-by-id` instruction for an expr
   (define (delete-expr stx)
-    (with-syntax ([id (syntax-parse (context-ref (get-id-ctxt stx) #'id) [({~datum id} the-id:id) #'the-id])])
+    (with-syntax ([id (syntax-parse (context-ref (get-id-ctxt stx) #'art-id) [({~datum art-id} the-id:id) #'the-id])])
       (qq-art stx (delete-by-id id))))
-
-
 
   (define (un-@ expr) (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] #,expr)))
 
-
-  (define put-id (compile-reference #'id))
+  (define put-id (compile-reference #'art-id))
   (define (compile-rewrite-exprs exprs ctxt)
     (cond
       [(null? exprs) ctxt]
@@ -201,7 +206,7 @@
                   #:fail-unless (object/s? it) (raise-syntax-error 'compile-rewrite-exprs (format "unrecognized object: ~a" (syntax->datum inner-expr)) inner-expr)
                   (void)])
                (define inner-ctxt (or (get-id-ctxt inner-expr) '()))
-               (define maybe-id (if (context-ref inner-ctxt #'id) '() (list #`(#,put-id #,(gensym)))))
+               (define maybe-id (if (context-ref inner-ctxt #'art-id) '() (list #`(#,put-id #,(gensym)))))
                (define inner-ctxt* (append maybe-id inner-ctxt))
                (define ctxt* (merge-coordinates (or (get-id-ctxt expr) '()) inner-ctxt* ctxt))
                (set-id-ctxt inner-expr ctxt*)))
@@ -211,8 +216,9 @@
             (define ctxt*
               (filter 
                 (λ(expr) 
-                  (syntax-parse (context-ref (get-id-ctxt expr) #'id) 
-                    [(_ the-id*:id) (not (free-identifier=? #'the-id #'the-id*))]
+                  (syntax-parse (context-ref (get-id-ctxt expr) #'art-id) 
+                    [(_ the-id*:id) 
+                     (not (free-identifier=? #'the-id #'the-id*))]
                     [_ #t])) 
                   ctxt))
             (compile-rewrite-exprs (cdr exprs) ctxt*)]
@@ -223,8 +229,13 @@
                (set-id-ctxt b (merge-coordinates coords* (or (get-id-ctxt b) '()) ctxt))))
            (define ctxt* (compile-rewrite-exprs coordinated ctxt))
            (compile-rewrite-exprs (cdr exprs) ctxt*)]
-          [({~datum pocket-rewrite} expr ...)
-           (define evald (compile-rewrite-exprs (syntax->list #'(expr ...)) '()))
+          [({~datum pocket-rewrite} inner-expr ...)
+           (define coordinated
+             (for/list ([inner-expr (syntax->list #'(inner-expr ...))])
+               (define inner-ctxt (or (get-id-ctxt inner-expr) '()))
+               (define ctxt* (merge-coordinates (or (get-id-ctxt expr) '()) inner-ctxt ctxt))
+               (set-id-ctxt inner-expr ctxt*)))
+           (define evald (compile-rewrite-exprs coordinated '()))
            (compile-rewrite-exprs (cdr exprs) (append ctxt evald))]
           [(object:id arg ...)
            #:when (lookup #'object object/s?)

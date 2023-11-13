@@ -54,7 +54,7 @@ So now — A minor. Suddenly.
 Salieri writes the key signature.
 
 @chunk[<the-header>
-  (measure@ [1 16] (key a 0 minor))]
+  (measure@ 1 (key a 0 minor))]
 
 MOZART
 The Fire.
@@ -66,7 +66,7 @@ MOZART
 Common time.
 
 @chunk[<the-header>
-  (measure@ [1 16] (time-sig 4 4))]
+  (measure@ 1 (time-sig 4 4))]
 
 Salieri writes this, and continues now to write as swiftly
 and urgently as he can, at Mozart’s dictation. He is obviously
@@ -87,7 +87,7 @@ Con-fu-ta-tis.
 
 @chunk[<the-definitions>
   (define-simple-rewriter confutatis-rhythm expand-confutatis
-    (rhythm 0.75 0.25 1 1))]
+    (-- [4 (rhythm 0.75 0.25 1 1)]))]
 
 (speaking)
 Second measure, second beat.
@@ -113,7 +113,7 @@ Flam-mis a-cri-bus ad-dic-tis.
 
 @chunk[<the-confutatis>
   (music@ [(3 2) (basses)]
-    (-- [4 (seq (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 0 3) (note f 0 3) (note d 0 3))
+    (-- [5 (seq (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 0 3) (note f 0 3) (note d 0 3))
            (flammis-rhythm)]))]
 
 @chunk[<the-definitions>
@@ -128,7 +128,7 @@ dic-tis.
 
 @chunk[<the-confutatis>
   (music@ [(4 4) (basses)]
-    #;(-- [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
+    (-- [2 (seq (note d 0 4) (note d 0 4) (note d 0 4) (note e 0 3))]
         [5 (seq (note g 1 3) (note e 0 3)
                 (note c 0 4) (note a 0 3) (note c 0 4) (note a 0 3) 
                 (note g 1 3) (note e 0 3))])
@@ -184,10 +184,10 @@ mis a-cri-bus ad-dic-tis.
 
 @chunk[<the-confutatis>
   (music@ [(4 2) (tenors)]
-    (-- 0 [4 (seq (note f 0 4) (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 1 3) (note e 0 3))]
-          [5 (seq (note d 0 4) (note d 0 4) (note d 1 4) (note d 1 4) (note d 1 4) (note d 1 4) (note e 0 4) (note e 0 3))])
-    (-- 0 [4 (rhythm 0.75 0.25 0.75 0.25 0.75 0.25 0.75 0.25)] 
-          [5 (flammis-rhythm)]))]
+    (-- [4 (seq (note f 0 4) (note e 0 4) (note d 0 4) (note c 0 4) (note b 0 3) (note a 0 3) (note g 1 3) (note e 0 3))]
+        [5 (seq (note d 0 4) (note d 0 4) (note d 1 4) (note d 1 4) (note d 1 4) (note d 1 4) (note e 0 4) (note e 0 3))])
+    (-- [4 (rhythm 0.75 0.25 0.75 0.25 0.75 0.25 0.75 0.25)] 
+        [5 (flammis-rhythm)]))]
 
 His voice is lost on the last words, as tenors engulf it and
 take over the soundtrack, singing their whole line from the
@@ -206,9 +206,10 @@ the opening notes of
 the bass vocal line)
 
 @chunk[<the-confutatis>
-  (musi@ [0 24 (basses)] 
-    (copy-to (bassoon-2))
-    (copy-to (bass-trombone)))]
+  (i@ [0 24] 
+    (ss@ (basses)
+      (copy-to (bassoon-2))
+      (copy-to (bass-trombone))))]
 
 The first bassoon and tenor trombone -
 
@@ -234,9 +235,10 @@ SALIERI
 Also identical?
 
 @chunk[<the-confutatis>
-  (musi@ [0 24 (tenors)] 
-    (copy-to (bassoon-1))
-    (copy-to (tenor-trombone)))]
+  (i@ [0 24]
+    (ss@ (tenors)
+      (copy-to (bassoon-1))
+      (copy-to (tenor-trombone))))]
 
 MOZART
 Exactly. The instruments to go with
@@ -245,16 +247,16 @@ tonic and dominant.
 
 @chunk[<the-confutatis>
   (ss@ (trumpet)
-    (-- 0 [1 (^ 1)] [1] [1 (^ 1)] [1] 
-          [1 (^ 4)] [1] [1 (^ 4)] [1]
-          [1 (^ 5)] [1] [1 (^ 5)] [1]
-          [1 (^ 4)] [1] [1 (^ 4)] [1]
-          [1 (^ 5)] [1] [1 (^ 1)] [1]
-          [1 (^ 5)])
+    (-- [1 (^ 1)] [1] [1 (^ 1)] [1] 
+        [1 (^ 4)] [1] [1 (^ 4)] [1]
+        [1 (^ 5)] [1] [1 (^ 5)] [1]
+        [1 (^ 4)] [1] [1 (^ 4)] [1]
+        [1 (^ 5)] [1] [1 (^ 1)] [1]
+        [1 (^ 5)])
           
-    (i@ [0 24] (copy-to (timpani))))
+    (measure@ [1 6] (ss@ (trumpet) (copy-to (timpani)))))
   
-  (i@ [0 24]
+  (measure@ [1 6]
     (ss@ (trumpet) (octave 4))
     (ss@ (timpani) (octave 3)))]
 
@@ -281,13 +283,11 @@ He sings the urgent first measure of the ostinato.
 
 @chunk[<the-confutatis>
   (ss@ (strings)
-    (measure@ [1 8] (octave 4))
 
-    (measure@ [1 6] 
-      (repeat 1 (rhythm 0.125 0.125 0.25 0.25 0.25)))
-    (measure@ [1 6] 
-      (repeat 2 (-- 0 [1 (seq (^ 1) (^ 2) (^ 3) (^ 3) (^ 3))] 
-                      [1 (seq (^ 3) (^ 2) (^ 1) (^ 1) (^ 1))]))))]
+    (measure@ [1 5] (loop 1 (rhythm 0.125 0.125 0.25 0.25 0.25)))
+    (measure@ [1 4] 
+      (loop 2 (-- [1 (seq (^ 1) (^ 2) (^ 3) (^ 3) (^ 3))]
+                  [1 (seq (^ 3) (^ 2) (^ 1) (^ 1) (^ 1))]))))]
 
 MOZART
 (speaking)
@@ -319,7 +319,10 @@ to the dominant chord. Do you see?
     (-- [4] [4 (transpose-diatonic 1)] [4 (transpose-diatonic 2)] [4 (transpose-diatonic 3)]
         [1 (seq (^ 5) (^ 7) (^ 2) (^ 2) (^ 2))] [1 (seq (^ 2) (^ 7) (^ 5) (^ 5) (^ 5))] 
         [1 (seq (^ 5) (^ 1) (^ 3) (^ 3) (^ 3))] [1 (seq (^ 3) (^ 1) (^ 5) (^ 5) (^ 5))]
-        [0.5 (^ 5)] [0.5 (^ 5)]))]
+        [0.5 (^ 5)] [0.5 (^ 5)])
+        
+
+    (measure@ [1 6] (octave 4)))]
 
 As Salieri writes, Mozart sings the ostinato from the
 beginning, but the unaccompanied strings overwhelm his voice
@@ -336,7 +339,7 @@ sotto voce, pianissimo. Voca me cum
 benedictis. Call me among the blessed.
 
 @chunk[<the-voca> 
-  (measure@ [1 8] (dynamic pp))]
+  (i@ [0 32] (dynamic pp))]
 
 He is now sitting bolt upright, hushed and inspired.
 
@@ -427,39 +430,40 @@ now!
 
 @chunk[<the-header>
 
-  (mi@ [(1 1)]
+  (measure@ 1 
+
     (instrument-map
       [voice . 000/000_Montre_8]
       [trombone . 000/025_Trompette_8]
       [bassoon . 001/055_Voix_Celeste_8]
       [trumpet . 000/069_Quintadena8Viola4]
       [timpani . 000/073_Cornemuse_8]
-      [strings . 000/065_Quintadena_8]))
+      [strings . 000/065_Quintadena_8])
 
-  (music@ [(1 1) (sopranos)] (instrument voice))
-  (music@ [(1 1) (altos)] (instrument voice))
-  (music@ [(1 1) (tenors)] (instrument voice))
-  (music@ [(1 1) (basses)] (instrument voice))
+    (ss@ (tenors) (instrument voice))
+    (ss@ (basses) (instrument voice))
 
-  (music@ [(1 1) (bass-trombone)] (instrument trombone))
-  (music@ [(1 1) (bassoon-2)] (instrument bassoon))
+    (ss@ (sopranos) (instrument voice))
+    (ss@ (altos) (instrument voice))
+    (ss@ (bass-trombone) (instrument trombone))
+    (ss@ (bassoon-2) (instrument bassoon))
 
-  (music@ [(1 1) (tenor-trombone)] (instrument trombone))
-  (music@ [(1 1) (bassoon-1)] (instrument bassoon))
+    (ss@ (tenor-trombone) (instrument trombone))
+    (ss@ (bassoon-1) (instrument bassoon))
 
-  (music@ [(1 1) (trumpet)] (instrument trumpet))
-  (music@ [(1 1) (timpani)] (instrument timpani))
+    (ss@ (trumpet) (instrument trumpet))
+    (ss@ (timpani) (instrument timpani))
 
-  (music@ [(1 1) (strings)] (instrument strings))
+    (ss@ (strings) (instrument strings))
 
-  (mi@ [(1 1)] (tempo 86))
+    (tempo 86))
 ]
 
 @chunk[<the-footer>
-  (mi@ [(0 100)]
+  (measure@ 1
     (metric-interval->interval)
     (expand-confutatis) (expand-flammis) (expand-voca-ostinato) (expand-voca-ostinato-^) ; expand the vars
-    (expand-repeat) (apply-rhythm) ; repeats and rhythms
+    (expand-loop) (apply-rhythm) ; repeats and rhythms
     (run-transpose-diatonic) (^->note) ; working with scale degrees
     (note->midi) (d/dt) ; ready to render
     )]
@@ -477,7 +481,6 @@ now!
 
   <the-definitions>
 
-  
     (define sound 
       (perform linuxsampler-performer
        <the-header> 
@@ -488,7 +491,6 @@ now!
                                    #:exists 'replace))
     (displayln sound file)
     (close-output-port file)
-    
     
     #;(define xml
       (perform musicxml-performer

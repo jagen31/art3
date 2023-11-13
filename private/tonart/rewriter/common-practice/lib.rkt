@@ -61,6 +61,8 @@
 (define-art-object (^ [degree]))
 (define-art-object (octave [o]))
 
+(define-art-object (pitch [p a]))
+
 (define-rewriter ^->note
   (syntax-parser
     [_ 
@@ -98,10 +100,11 @@
        (begin
          (define-values (exprs deletes)
            (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2)))
-                     ([expr (current-ctxt)])
+                     ;; FIXME jagen
+                     ([expr (filter (λ (e) (context-within? (get-id-ctxt e) (get-id-ctxt expr) (current-ctxt))) (current-ctxt))])
              (syntax-parse expr
                [({~datum ^} ix:number)
-                (values (cons (qq-art expr (put (^ #,(add1 (modulo (sub1 (+ (syntax-e #'val) (syntax-e #'ix))) 8))))) acc1) (cons (delete-expr expr) acc2))]
+                (values (cons (qq-art expr (put (^ #,(+ (syntax-e #'val) (syntax-e #'ix))))) acc1) (cons (delete-expr expr) acc2))]
                [_ (values acc1 acc2)])))
          (append deletes exprs))
      #'(@ () result ...)])))
@@ -114,20 +117,21 @@
     (syntax-parse stx
       [(_ [(mstart* bstart*)] expr ...)
        ;; FIXME jagen fix this!!
-       (qq-art stx (mi@ [(mstart* bstart*) (+inf.0 4)] expr ...))]
+       (qq-art stx (mi@ [(mstart* bstart*) (+inf.0 +inf.0)] expr ...))]
       [(_ [(mstart* bstart*) (mend* bend*)] expr ...)
        (qq-art stx (@ [(metric-interval (start mstart* bstart*) (end mend* bend*))] expr ...))])))
 
 (define-rewriter measure@
   (λ(stx)
     (syntax-parse stx
-      [(_ [start:number end:number] expr ...) (qq-art stx (mi@ [(start 1) (end 4)] expr ...))])))
+      [(_ start:number expr ...) (qq-art stx (mi@ [(start 1)] expr ...))]
+      [(_ [start:number end:number] expr ...) (qq-art stx (mi@ [(start 1) (#,(add1 (syntax-e #'end)) 1)] expr ...))])))
 
 (define-rewriter music@
   (λ(stx)
     (syntax-parse stx
       [(_ [(measure:number beat:number) (voice:id ...)] expr ...) 
-       (qq-art stx (music@ [(measure beat) (+inf.0 4) (voice ...)] expr ...))]
+       (qq-art stx (music@ [(measure beat) (+inf.0 +inf.0) (voice ...)] expr ...))]
       [(_ [(mstart:number bstart:number) (mend:number bend:number) (voice:id ...)] expr ...)
        (qq-art stx (mi@ [(mstart bstart) (mend bend)] (ss@ (voice ...) expr ...)))])))
 
@@ -161,8 +165,8 @@
     [(_ (_ start*:number) (_ end*:number))
      (qq-art stx
        (metric-interval 
-         (start #,(add1 (floor (/ (syntax-e #'start*) 4))) #,(add1 (remainder (syntax-e #'start*) 4)))
-         (end #,(add1 (floor (/ (syntax-e #'end*) 4))) #,(add1 (remainder (syntax-e #'end*) 4)))))]
+         (start #,(add1 (floor (/ (syntax-e #'start*) 4))) #,(add1 (float-modulo (syntax-e #'start*) 4)))
+         (end #,(add1 (floor (/ (syntax-e #'end*) 4))) #,(add1 (float-modulo (syntax-e #'end*) 4)))))]
     [_ #f]))
 
 (module+ test
@@ -204,3 +208,41 @@
 (define-nonhom-merge-rule interval metric-interval #:keep-right
   (λ (l r l* _ ctxt)
     (do-merge-metric-interval (do-interval->metric-interval l ctxt) r)))
+
+(define-nonhom-within?-rule metric-interval interval
+  (λ (l r l* _ ctxt)
+    (do-interval-within? (do-metric-interval->interval l ctxt) r)))
+
+(define-nonhom-within?-rule interval metric-interval
+  (λ (l r l* _ ctxt)
+    (do-interval-within? l (do-metric-interval->interval r ctxt))))
+
+(define-art-object (chord [pitch accidental mode]))
+
+(define-art-object (relative-harmony [chords]))
+
+(define-for-syntax (odd-even-list li) 
+  (define (odd-even-list li lacc racc)
+    (cond 
+      [(null? li) (values (reverse lacc) (reverse racc))]
+      [(null? (cdr li)) (values (cons (car li) (reverse lacc)) (reverse racc))]
+      [else (odd-even-list (cddr li) (cons (car li) lacc) (cons (cadr li) racc))]))
+  (odd-even-list li '() '()))
+
+(define-mapping-rewriter (relative-harmony->chord-seq [(: harm relative-harmony)])
+  (λ (stx harm)
+    (syntax-parse harm
+      [(_ harmony ...)
+       (define start-pitch (context-ref/surrounding (current-ctxt) (get-id-ctxt harm) #'pitch))
+       (unless start-pitch (raise-syntax-error 'relative-harmony->chord-seq "no pitch in context for relative harmony" harm)) 
+       (syntax-parse start-pitch
+         [(_ p*:id a*:number)
+          #:do
+            [(define pitch (map syntax-e (list #'p* #'a*))) 
+             (define-values (chord-types transitions) (odd-even-list (syntax->datum #'(harmony ...))))]
+          #:with (chords ...)
+            (for/fold ([chords '()] [pitch pitch] #:result (reverse chords)) 
+                      ([chord-type chord-types] [transition (cons '(P 1) transitions)])
+              (define new-pitch (transpose-by-interval (first pitch) (second pitch) (second transition) (first transition)))
+              (values (cons #`(chord #,(first new-pitch) #,(second new-pitch) #,chord-type) chords) new-pitch))
+          (qq-art harm (seq chords ...))])])))
