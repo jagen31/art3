@@ -1,6 +1,6 @@
 #lang racket
 
-(require "core.rkt" syntax-spec 
+(require "core.rkt" syntax-spec racket/class
          "coordinate/instant.rkt" "coordinate/interval.rkt" "coordinate/subset.rkt" "coordinate/switch.rkt"
          (for-syntax syntax/parse racket/list (except-in ee-lib racket-var) syntax/id-table))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
@@ -12,7 +12,7 @@
 (define-art-object (! [ix]))
 
 ;; index into the `seq` (convert `!`s to their corresponding objects)
-(define-rewriter seq-ref
+(define-art-rewriter seq-ref
   (syntax-parser
     [_ 
      #:with (result ...)
@@ -35,7 +35,7 @@
 
      #'(@ () result ...)]))
 
-(define-performer quote-performer 
+(define-art-realizer quote-performer 
   (λ(stx)
     (syntax-parse stx
       [(_ exprs ...)
@@ -122,7 +122,7 @@
 ;;;;;;;;;;;;;;;;;;
 
 ;; delete by name
-(define-rewriter delete
+(define-art-rewriter delete
   (λ (stx)
     (syntax-parse stx
       [(_ name:id)
@@ -141,13 +141,13 @@
 
 
 ;;;;;;;;; SUBSET 
-(define-rewriter ss@
+(define-art-rewriter ss@
   (λ(stx)
     (syntax-parse stx
       [(_ [item ...] expr ...)
        (qq-art stx (@ [(subset item ...)] expr ...))])))
 
-(define-rewriter copy-to
+(define-art-rewriter copy-to
   (λ (stx)
     (syntax-parse stx
       [(_ (ss* ...))
@@ -162,21 +162,15 @@
            #`(put #,(put-in-id-ctxt item #'(subset ss* ...))))])
          #`(@ () target* ...))])))
 
-
-
-
-
-
-
 ;;;;;;;;;; INTERVAL
 
-(define-rewriter i@
+(define-art-rewriter i@
   (λ(stx)
     (syntax-parse stx
       [(_ [start* end*] expr ...)
        (qq-art stx (@ [(interval (start start*) (end end*))] expr ...))])))
 
-(define-rewriter --
+(define-art-rewriter --
   (λ(stx)
     (syntax-parse stx
       [(_ start*:number {~and box [len:number expr ...]} ...)
@@ -212,7 +206,7 @@
       [_ (error 'expand-loop "oops")])))
 
 
-(define-rewriter translate
+(define-art-rewriter translate
   (syntax-parser
     [(_ value:number)
      #:with (result ...) (for/foldr ([acc '()]) 
@@ -231,7 +225,7 @@
 ;; nice & quick.
 (define-art-object (rhythm []))
 
-(define-rewriter uniform-rhythm
+(define-art-rewriter uniform-rhythm
   (λ (stx)
     (syntax-parse (context-ref (get-id-ctxt stx) #'interval)
       [(_ (start s) (end e))
@@ -252,7 +246,7 @@
         ;; FIXME jagen TOTALLY UNSAFE (this will seq-ref in the surrounding context :'( )
         (seq-ref)))))
 
-(define-rewriter apply-rhythm*
+(define-art-rewriter apply-rhythm*
   (λ (stx)
     (syntax-parse stx
       [(apply-rhythm* expr:number ...)
@@ -289,7 +283,7 @@
 
 (define-art-object (divisions [n]))
 
-(define-rewriter exact-subdivide
+(define-art-rewriter exact-subdivide
   (λ (stx)
     (syntax-parse stx
       [(_ division* ε*:number)
@@ -315,7 +309,7 @@
 
 ;;;;;;; INSTANT/SWITCH
 ;; interval -> instant + switch
-(define-rewriter d/dt
+(define-art-rewriter d/dt
   (λ (stx)
     (syntax-parse stx
       [_
@@ -347,7 +341,7 @@
      #'(begin
          (define-art-object (iname* [])) ...)]))
 
-(define-rewriter run-interpretation
+(define-art-rewriter run-interpretation
   (λ (stx)
     (syntax-parse stx
       [(_ interp*:id)

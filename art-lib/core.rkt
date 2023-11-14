@@ -43,11 +43,11 @@
     #:binding (export coord)
     #'(define-syntax coord (coordinate/s)))
 
-  (host-interface/definitions (define-rewriter r:rewriter body:expr)
+  (host-interface/definitions (define-art-rewriter r:rewriter body:expr)
     #:binding (export r)
     #'(define-syntax r (rewriter/s body)))
 
-  (host-interface/definitions (define-performer perf:art-performer body:expr)
+  (host-interface/definitions (define-art-realizer perf:art-performer body:expr)
     #:binding (export perf)
     #'(define-syntax perf body))
 
