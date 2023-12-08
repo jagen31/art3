@@ -1,10 +1,20 @@
 #lang racket
 
-(require "../core.rkt" (for-syntax syntax/parse racket/list))
+(require "../core.rkt" (for-syntax syntax/parse racket/list racket/syntax))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
-;;;;;;;;;;; INTERVAL COORDINATE THINGS
+;;;;;;;;;;; INTERVAL COORDINATE FAMILY
 
+(define-syntax define-interval-coordinate
+  (λ (stx)
+    (syntax-parse stx
+      [(_ interval:id)
+       #:with [do-merge-interval do-interval-within? expr-start expr-end]
+              (list (format-id #'interval "do-merge-~a" #'interval) (format-id #'interval "do-~a-within?" #'interval) 
+                    (format-id #'interval "expr-~a-start" #'interval) (format-id #'interval "expr-~a-end" #'interval))
+
+;; part of body of 'define-interval-coordinate'!!!! ^^^^^^
+#'(begin
 (define-for-syntax (do-merge-interval l r)
   (let/ec break
     (unless l (break r))
@@ -48,3 +58,13 @@
   (λ (l r _ __ ___) (do-interval-within? l r)))
 
 (define-coordinate (interval [start end]))
+
+(define-for-syntax (expr-start stx)
+  (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
+    [(_ (_ s) _) (syntax-e #'s)]
+    [_ 0]))
+
+(define-for-syntax (expr-end stx)
+  (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
+    [(_ _ (_ e)) (syntax-e #'e)]
+    [_ +inf.0])))])))

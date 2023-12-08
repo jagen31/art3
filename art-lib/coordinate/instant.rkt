@@ -11,6 +11,9 @@
       (unless r (break l))
       (error 'merge-instant "oops, cannot merge instant for now"))))
   
-(define-hom-within?-rule within? (λ (l r _ __ ___) #t))
+(define-hom-within?-rule instant (λ (l r _ __ ___)
+  (syntax-parse #`(#,l #,r)
+    [(({~datum instant} lix) ({~datum instant} rix))
+     (= (syntax-e #'lix) (syntax-e #'rix))])))
 
 (define-coordinate (instant [type]))

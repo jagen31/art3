@@ -70,14 +70,14 @@ Realization is the only phase working with true racket syntax objects, and it is
 about taking art code at phase 1 to racket code at phase 0.  In other words, all
 representation, rewriting, and realization happens at compile time over art
 syntax, and the realizer finally outputs the corresponding racket syntax that
-will be run at runtime.  Again, realizers are diverse and a piece might be
-realized at different times, in different formats, in different ways.
-@margin-note*{Leaving a comment as to which step represents the actual
-composition is extremely helpful!} A composer with multiple realizations in mind
-should write a program that rewrites into a single ur-composition representing
-the actual, official work.  Then, further chains of rewrites should branch off
-from there, resulting in a tree of sorts. Each branch massages the work into the
-formats needed by the realizers.  
+will be compiled by racket into the runtime code.  Again, realizers are diverse 
+and a piece might be realized at different times, in different formats, in
+different ways.  @margin-note*{Leaving a comment as to which step represents the
+actual composition is extremely helpful!} A composer with multiple realizations
+in mind should write a program that rewrites into a single ur-composition
+representing the actual, official work.  Then, further chains of rewrites should
+branch off from there, resulting in a tree. Each branch massages the
+work into the formats needed by the realizers.  
 
 @section{Denotations: art expressions in context}
 
