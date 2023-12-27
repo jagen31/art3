@@ -14,3 +14,4 @@ An extensible markup language and meta-language, for creating and manipulating w
 @table-of-contents[]
 
 @include-section["lang.scrbl"]
+@include-section["lib.scrbl"]
