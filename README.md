@@ -6,5 +6,5 @@
 - Figure out a better way to do bindings for rewriters (use `syntax-spec` better)
 - Assess the viability of merge rules / within? rules.
 - better support for infinite intervals (so you don't have to always provide an end)
-- possibly making stdlib coordinates into coordinate families
+- possibly making lib coordinates into coordinate families
 - IMPROVE THE QUALITY OF THE WRITING IN THE DOCS. Sheesh.

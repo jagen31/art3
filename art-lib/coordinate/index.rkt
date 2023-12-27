@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../core.rkt" (for-syntax syntax/parse racket/list racket/syntax))
+(require art/private/core (for-syntax syntax/parse racket/list racket/syntax))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 ;;;;;;;;;;; INDEX COORDINATE CLASS

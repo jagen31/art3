@@ -18,8 +18,8 @@
 
 @defform[(define-art-object (art-object-id [id ...]))]
 @defform[(define-art-rewriter art-rewriter-id racket-expr)]
-@defform[(define-art-performer art-performer-id racket-expr)]
-@defform[(perform art-performer-id art-expr ...)]
+@defform[(define-art-realizer art-realizer-id racket-expr)]
+@defform[(realize art-realizer-id art-expr ...)]
 
 @section{Procedural Concepts: The three re's of art}
 
@@ -37,8 +37,8 @@ system, which implicitly relates the expressions to each other in that space.
 
 Representation deals almost exclusively with objects and the markup language.
 Art is a notation system in the sense that the final output is meant for a
-performer to read and use to produce a performance.  The objects in the
-representation are what the performer actually sees.
+realizer to read and use to produce a performance.  The objects in the
+representation are what the realizer actually sees.
 
 @subsection{Rewriting}
 
@@ -53,18 +53,18 @@ coordinate system and the relation it defines between the objects.
 Rewriting deals with rewriters and the meta-language.  Of course,
 rewriters also implicitly deal with the objects they are rewriting.  The general
 purpose of rewriting is transforming the work into something that more closely
-resembles what you would like the performer or the audience to see.  No one
+resembles what you would like the realizer or the audience to see.  No one
 except you will see the rewriters!  They are entirely a part of the meta
 language: keep that in mind.  If it helps, think of rewriting as having the
 computer perform some work for you to help make the composing easier.
 
 @subsection{Realizing}
 
-@margin-note{For music, performers range from playing a sound immediately to
+@margin-note{For music, realizers range from playing a sound immediately to
 compiling to c++ code to compiling to MusicXML, to quoting the music expressions and
 putting them in a list.}
 Finally, the art is @bold{realized}, meaning it is compiled to a viable representation in racket.
-Realizers (also called performers) are extremely diverse.
+Realizers (also called realizers) are extremely diverse.
 
 Realization is the only phase working with true racket syntax objects, and it is
 about taking art code at phase 1 to racket code at phase 0.  In other words, all
@@ -153,13 +153,13 @@ which takes all expressions in the target area and copies them into another.
 
 Realizers are effectively syntax transforms, being functions transforming art
 syntax to racket syntax.  A particular realizer is triggered by the racket form
-@code{(perform <realizer> <art-expression> ...)}.  The @code{perform} form is an
+@code{(realize <realizer> <art-expression> ...)}.  The @code{perform} form is an
 expression, which is replaced by the result of the realizer.  Realizers
-typically recognize a set of objects.  For example, a music performer might
+typically recognize a set of objects.  For example, a music realizer might
 recognize notes and tones.  A good tactic for constructing realizers is to make
 a realizer for each object the realizer can recognize and compose them together.
-For example, music realizers are usually composed of a note subperformer and a
-tone subperformer.
+For example, music realizers are usually composed of a note subrealizer and a
+tone subrealizer.
 
 @subsection{A note on boundaries}
 
@@ -169,7 +169,7 @@ immediately clear.  For example, in music, @code{transpose} could be a rewriter
 which turns notes into other notes.  Or it could be an object with a
 corresponding rewriter, @code{run-transpose}.  This is traditionally called
 @code{reification}.  A useful rule is: if you'd ever want to directly display
-the rewriter to a performer, e.g.  write "transpose by a 5th" on the score, use
+the rewriter to a realizer, e.g.  write "transpose by a 5th" on the score, use
 a reified rewriter.  Otherwise, it is simpler to just write a plain old
 rewriter.  Somewhat evilly, there could also be more reification.
 @code{run-transpose} could be made into an object and @code{do-run-transpose}
@@ -186,14 +186,14 @@ figured bass.} Early music keyboardists can read from it and perform it
 directly, live. To do this well requires training and lots of practice.  But,
 performing in this manner provides multiple benefits.  
 
-1. The compactness of the format enables the performer to read the rest of the
+1. The compactness of the format enables the realizer to read the rest of the
 score more easily. 
 2. The denotation of figures is more abstract than exact
 notes, which enables a more flexible interpretation, responding to the
-particular performers, their interpretations, the particular instruments, the
+particular realizers, their interpretations, the particular instruments, the
 room, etc. as the music is being produced.
 
-For performers who aren't trained in figured bass, editions exist where the figured
+For realizers who aren't trained in figured bass, editions exist where the figured
 bass has been rewritten to be notes on a grand staff, representing what a
 early music player might have played.  Of course, some of the benefits of a live
 realization are lost.
@@ -205,6 +205,6 @@ expressions can, unsurprisingly, perform everything!), but also on the desire to
 have the objects exist in compositions.  For example, I stop rewriting at tones for all
 computer music realizers, even though for some, I could theoretically convert the tones
 into the equivalent vectors representing the tone as bytes.  I do this because I
-don't see much other use for the bytevectors, and the performer can easily do the work.
+don't see much other use for the bytevectors, and the realizer can easily do the work.
 The boundary where rewriting stops and realizing begins can be understood as the 
 "input type" of the realizer.
