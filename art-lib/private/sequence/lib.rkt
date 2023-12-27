@@ -1,10 +1,40 @@
 #lang racket
 
-(require "../core.rkt" "../coordinate/index.rkt" "../stdlib.rkt" 2htdp/image 
-         (for-syntax syntax/parse racket/list))
+(require art art/coordinate/index art/private/draw 2htdp/image (for-syntax syntax/parse racket/list syntax/id-set))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 (define-index-coordinate index)
+
+;;;;;;; array context.
+(define-art-embedding (seq [items])
+  (λ (stx ctxt)
+    (syntax-parse stx
+      [(head:id expr ...)
+       (rewrite (quasisyntax/loc stx (context expr ...)))])))
+
+(define-mapping-rewriter (rewrite-in-seq [(: s seq)])
+  (let ()
+    (define (go stx s)
+      (syntax-parse stx
+        [(_ expr ... {~seq #:capture [name:id ...]})
+         (syntax-parse s
+           [(_ expr* ...)
+             #:do [
+              (define names (immutable-free-id-set (syntax->list #'(name ...))))
+              (define captures 
+                (if (attribute name)
+                  (filter 
+                    (λ (e) (syntax-parse e 
+                      [(head:id _ ...) (free-id-set-member? names #'head)]))
+                    (current-ctxt))
+                  '()))]
+             #:with (result ...) 
+               (rewrite-in (append captures (syntax->list #'(expr* ...))) #`(context expr ... #,@(map delete-expr captures)))
+             #`(context #,(delete-expr s) #,(qq-art s (seq result ...)))])]
+       ;; FIXME jagen
+       [(head expr ...) (go #'(head expr ... #:capture []) s)]))
+    go))
+
 
 (define-art-rewriter ix@
   (λ (stx)
@@ -49,15 +79,7 @@
       [(_ n:number expr ...) (do-expand-ix-loop repeat 0 (syntax-e #'n) (syntax->list #'(expr ...)))]
       [_ (error 'expand-loop "oops")])))
 
-;;;;;;; LISTS of ITEMS in a context.
-(define-art-embedding (seq [items])
-  (λ (stx ctxt)
-    (syntax-parse stx
-      [(head:id expr ...)
-       (compile-rewrite-exprs (list (quasisyntax/loc stx (@ () expr ...))) '())])))
 (define-art-object (! [ix]))
-
-
 ;; index into the `seq` (convert `!`s to their corresponding objects)
 (define-art-rewriter seq-ref
   (syntax-parser
@@ -69,10 +91,7 @@
                    ([expr (current-ctxt)])
            (syntax-parse expr
              [({~literal !} value:number)
-              (define items (context-ref/surrounding (current-ctxt) (get-id-ctxt expr) #'seq))
-              (unless items 
-                (define msg (format "no seq in context for ref. ref: ~a. candidates: ~a" (un-@ expr) (map un-@ (context-ref* (current-ctxt) #'seq))))
-                (raise-syntax-error 'seq-ref msg expr))
+              (define items (require-context (current-ctxt) expr #'seq))
               (syntax-parse items
                 [(_ the-items ...) 
                  #:with the-item (or (findf (λ (expr) 
@@ -80,32 +99,61 @@
                      [(_ ix*:number) (= (syntax-e #'ix*) (syntax-e #'value))]))
                    (syntax->list #'(the-items ...)))
                   (raise-syntax-error 'seq-ref (format "No item with given index in sequence: ~s" (un-@ items)) expr))
-                 (values (cons (qq-art expr (put the-item)) acc1)
+                 (values (cons (qq-art expr (context the-item)) acc1)
                          (cons (delete-expr expr) acc2))])]
              [_ (values acc1 acc2)])))
         (append deletes exprs))
 
      #'(@ () result ...)]))
 
-(define-art-rewriter coalesce-seq
-  (λ (stx)
-    (syntax-parse stx
-      [_
-       #:do [(define exprs (context-ref*/within (current-ctxt) (get-id-ctxt stx) #'seq))
-             (define sorted (sort exprs < #:key expr-interval-start))]
-       #:with (result ...)        
-         (flatten 
-           (for/list ([e sorted])
-             (syntax-parse e
-               [({~literal seq} expr ...)
-                (map (λ (e) (remove-from-id-ctxt e #'index)) (syntax->list #'(expr ...)))])))
-      #`(@ () #,@(map delete-expr sorted) #,(qq-art stx (seq (ix-- result ...))))])))
+(module+ test
+  #;(realize (quote-realizer) (put (seq 42)) (rewrite-in-seq (delete !)))
+  #;(realize (quote-realizer) (put (seq (i@ [0 8] (loop 2 (dummy))) (expand-loop)) (! 0)) (seq-ref))
+  
+  #;(realize (quote-realizer)
+    (seq (ix-- (dumb) (dumber))) (! 0) (! 1)
+    (seq-ref)    
+    (-- [2 (hole)] [2 (hole)])
+    (fill-holes dumb))
+  
+  #;(realize (quote-realizer)
+    (@ [(instant 1)] (seq (ix-- (dumb))))
+    (@ [(instant 1)] (! 0))
+    (seq-ref))
+  
+  #;(realize (quote-realizer)
+    (-- [4 (dumb)] [2 (dumb)] [3 (dumb)])
+    (unapply-rhythm dumb))
+  
+ 
+  
+  #;(realize (quote-realizer)
+    (ix-- (seq (ix-- (dumb) (dumber))) (seq (ix-- (dumbest))))
+    (coalesce-seq))
+  
+  #;(realize (quote-realizer)
+    (ix-- (ix-- (dumb) (dumber) (dumbest)) (ix-- (dumbest) (dumber) (dumb)))
+    (split seq))
+  
+  #;(realize (quote-realizer)
+    (ix@ 1 (ix@ 2 (seq (ix@ [2] (seq (ix-- (ix-- (dumb) (dumber) (dumbest)))))))))
+  
+  #;(realize (quote-realizer)
+    (debug-perform (quote-realizer)))
+  
+  #;(define-interpretation test-interp)
+  
+  (interpretation+ test-interp
+    [foo (dumb)])
+  
+  #;(realize (quote-realizer)
+    (foo)
+    (interpret test-interp)))
+  
 
-
-
-(define-for-syntax (do-draw-seq ctxt width height drawers)
+(define-for-syntax (do-draw-seq ctxt width height)
   (define max-ix
-    (for/fold ([acc #f])
+    (for/fold ([acc '()])
               ([expr ctxt])
       (define ix (expr-index expr))
       (if acc (max-index acc ix) ix)))
@@ -134,11 +182,10 @@
        (hash-set acc (get-expr-single-index e)
          (syntax-parse e
            [({~literal seq} expr ...)
-            (define sub-result (do-draw-seq (syntax->list #'(expr ...)) (- each-width 20) (- each-height 20) drawers))
+            (define sub-result (do-draw-seq (syntax->list #'(expr ...)) (- each-width 20) (- each-height 20)))
             ;; draw a box for nested sequences, apl style
             #`(overlay (rectangle #,each-width #,each-height 'outline 'blue) #,sub-result)]
-           [_ (or (for/or ([drawer drawers]) (drawer e (- each-width 20) (- each-height 20))) (raise-syntax-error 'draw-seq "no drawer for expression." e)) 
-             ]))))
+           [_ (drawer-recur e)]))))
 
   (define result2 
     (for/fold ([im #'empty-image])
@@ -146,58 +193,10 @@
       #`(overlay/xy #,im (* #,each-width #,(cadr ix)) (* #,each-height #,(car ix)) #,expr)))
   result2)
 
-(define-art-realizer draw-seq-performer
+(define-drawer draw-seq
   (λ (stx)
     (syntax-parse stx
-      [(_ [width:number height:number] [drawers ...])
-       (do-draw-seq (current-ctxt) (syntax-e #'width) (syntax-e #'height)
-         (map (compose drawer/s-body syntax-local-value) (syntax->list #'(drawers ...))))])))
+      [(_ expr ...)
+       (do-draw-seq (syntax->list #'(expr ...)) (drawer-width) (drawer-height))])))
 
-
-(module+ test
-  #;(perform (quote-performer) (put (seq 42)) (rewrite-in-seq (delete !)))
-  #;(perform (quote-performer) (put (seq (i@ [0 8] (loop 2 (dummy))) (expand-loop)) (! 0)) (seq-ref))
-  
-  #;(perform (quote-performer)
-    (seq (ix-- (dumb) (dumber))) (! 0) (! 1)
-    (seq-ref)    
-    (-- [2 (hole)] [2 (hole)])
-    (fill-holes dumb))
-  
-  #;(perform (quote-performer)
-    (@ [(instant 1)] (seq (ix-- (dumb))))
-    (@ [(instant 1)] (! 0))
-    (seq-ref))
-  
-  #;(perform (quote-performer)
-    (-- [4 (dumb)] [2 (dumb)] [3 (dumb)])
-    (unapply-rhythm dumb))
-  
-  #;(perform (quote-performer)
-    (seq (ix-- (dumb) (dumber) (dumbest)))
-    (rhythm 3 4 5)
-    (apply-rhythm))
-  
-  #;(perform (quote-performer)
-    (ix-- (seq (ix-- (dumb) (dumber))) (seq (ix-- (dumbest))))
-    (coalesce-seq))
-  
-  #;(perform (quote-performer)
-    (ix-- (ix-- (dumb) (dumber) (dumbest)) (ix-- (dumbest) (dumber) (dumb)))
-    (split seq))
-  
-  #;(perform (quote-performer)
-    (ix@ 1 (ix@ 2 (put (seq (ix@ [2] (seq (ix-- (ix-- (dumb) (dumber) (dumbest))))))))))
-  
-  #;(perform (quote-performer)
-    (debug-perform (quote-performer)))
-  
-  #;(define-interpretation test-interp)
-  
-  #;(interpretation+ test-interp
-    [foo (dumb)])
-  
-  #;(perform quote-performer
-    (foo)
-    (interpret test-interp)))
-  
+(register-drawer! seq draw-seq)

@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../core.rkt" (for-syntax syntax/parse racket/list))
+(require art/private/core (for-syntax syntax/parse racket/list))
 (provide (all-defined-out))
 
 ;;;;;;;;;;; SWITCH COORDINATE THINGS

@@ -1,6 +1,6 @@
 #lang racket
 
-(require "../core.rkt" (for-syntax syntax/parse racket/list racket/syntax))
+(require art/private/core (for-syntax syntax/parse racket/list racket/syntax racket/match))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 ;;;;;;;;;;; INTERVAL COORDINATE FAMILY
@@ -9,9 +9,14 @@
   (λ (stx)
     (syntax-parse stx
       [(_ interval:id)
-       #:with [do-merge-interval do-interval-within? expr-start expr-end]
+       #:with [do-merge-interval do-interval-within? interval-syntax->datum expr-start expr-end expr-interval interval-intersect
+               context-ref*/interval-intersect]
               (list (format-id #'interval "do-merge-~a" #'interval) (format-id #'interval "do-~a-within?" #'interval) 
-                    (format-id #'interval "expr-~a-start" #'interval) (format-id #'interval "expr-~a-end" #'interval))
+                    (format-id #'interval "~a-syntax->datum" #'interval)
+                    (format-id #'interval "expr-~a-start" #'interval) (format-id #'interval "expr-~a-end" #'interval)
+
+                    (format-id #'interval "expr-~a" #'interval) (format-id #'interval "~a-intersect" #'interval)
+                    (format-id #'interval "context-ref*/~a-intersect" #'interval))
 
 ;; part of body of 'define-interval-coordinate'!!!! ^^^^^^
 #'(begin
@@ -59,6 +64,16 @@
 
 (define-coordinate (interval [start end]))
 
+(define-for-syntax (interval-syntax->datum stx)
+  (syntax-parse stx 
+    [(_ (_ s) (_ e)) (cons (syntax-e #'s) (syntax-e #'e))]
+    [_ '(0 . +inf.0)]))
+
+(define-for-syntax (expr-interval stx)
+  (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
+    [(_ (_ s) (_ e)) (cons (syntax-e #'s) (syntax-e #'e))]
+    [_ '(0 . +inf.0)]))
+
 (define-for-syntax (expr-start stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
     [(_ (_ s) _) (syntax-e #'s)]
@@ -67,4 +82,24 @@
 (define-for-syntax (expr-end stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
     [(_ _ (_ e)) (syntax-e #'e)]
-    [_ +inf.0])))])))
+    [_ +inf.0]))
+
+(define-for-syntax (interval-intersect l r)
+  (match* (l r)
+    [((cons s1 e1) (cons s2 e2))
+     (define max-start (max s1 s2))
+     (define min-end (min e1 e2))
+     (and (> min-end max-start) (cons max-start min-end))]
+    [(_ _) #f]))
+
+(define-for-syntax (context-ref*/interval-intersect ctxt id-ctxt)
+  (define coord-interval (interval-syntax->datum (context-ref id-ctxt #'interval)))
+  (define candidates
+    (for/foldr ([acc '()])
+               ([expr ctxt])
+      (syntax-parse expr 
+        [(head:id _ (... ...)) 
+         (define intersection (interval-intersect (expr-interval expr) coord-interval))
+         (if intersection (cons (cons intersection expr) acc) acc)]
+        [_ acc])))
+  candidates))])))
