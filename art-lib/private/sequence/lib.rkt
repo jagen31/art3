@@ -153,18 +153,19 @@
 
 (define-for-syntax (do-draw-seq ctxt width height)
   (define max-ix
-    (for/fold ([acc '()])
-              ([expr ctxt])
-      (define ix (expr-index expr))
-      (if acc (max-index acc ix) ix)))
+    (map add1
+         (for/fold ([acc #f])
+                   ([expr ctxt])
+           (define ix (expr-index expr))
+           (if acc (max-index acc ix) ix))))
   (when (> (length max-ix) 2) (raise-syntax-error 'draw-seq "cannot draw indexes greater than 2 yet" #f))
 
   (define-values (each-width each-height)
     (cond 
       [(= (length max-ix) 2)
-       (values (floor (/ width (add1 (cadr max-ix)))) (floor (/ height (add1 (car max-ix)))))]
+       (values (floor (/ width (cadr max-ix))) (floor (/ height (car max-ix))))]
       [(= (length max-ix) 1)
-       (values (floor (/ width (add1 (car max-ix)))) (floor height))]
+       (values (floor (/ width (car max-ix))) (floor height))]
       [(= (length max-ix) 0)
       (values (floor width) (floor height))]))
 

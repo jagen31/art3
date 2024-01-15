@@ -92,7 +92,7 @@
        (define set1 ((rewriter/s-body rw1) (qq-art stx left-expr)))
        (define set2 ((rewriter/s-body rw2) (qq-art stx right-expr)))
 
-       #`(@ () #,@(run-art-exprs (list set1 set2) (current-ctxt)))])))
+       #`(@ () #,@(run-art-exprs (list set1 set2) (current-ctxt) (lookup-ctxt)))])))
 
 (define-art-realizer quote-realizer (λ(stx) #`'(#,@(for/list ([e (current-ctxt)]) (un-@ e)))))
 
@@ -138,6 +138,16 @@
            (delete-expr item))])
          #`(@ () target* ...))])))
 
+;; delete by name from id-ctxt
+(define-art-rewriter delete-from-id-context
+  (λ (stx)
+    (syntax-parse stx
+      [(_ name:id)
+       (define target
+         (filter 
+           (λ (expr) (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt)))
+           (current-ctxt)))
+       #`(@ () #,@(map delete-expr target) #,@(map (λ (e) (remove-from-id-ctxt e #'name)) target))])))
 
 ;;;;;;;;; SUBSET 
 
@@ -172,15 +182,4 @@
             [_ acc]))
        #`(@ () result ...)])))
 
-(define-for-syntax (float-modulo n m)
-  (- n (* (floor (/ n m)) m)))
-
-(define-art-object (dumb []))
-(define-art-object (dumber []))
-(define-art-object (dumbest []))
-
-(define-mapping-rewriter (dumb->dumber [(: d dumb)])
-  (λ (stx d) #`(@ () #,(qq-art d (dumber)))))
-
-(define-mapping-rewriter (dumber->dumbest [(: d dumber)])
-  (λ (stx d) #`(@ () #,(delete-expr d) #,(qq-art d (dumbest)))))
+(define-for-syntax (float-modulo n m) (- n (* (floor (/ n m)) m)))

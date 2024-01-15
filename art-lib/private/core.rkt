@@ -1,7 +1,7 @@
 #lang racket
 
 (require syntax-spec rsound rsound/envelope
-         (for-syntax racket (except-in ee-lib racket-var) syntax/parse data/gvector) 
+         (for-syntax racket (except-in ee-lib racket-var) syntax/parse data/gvector syntax/id-set) 
          (for-meta 2 syntax/parse))
 
 (provide (all-defined-out) (for-syntax (all-defined-out)))
@@ -11,8 +11,10 @@
   (struct embed/s [compile])
   (struct rewriter/s [body])
   (struct realizer/s [body])
+  (struct art-var/s [value])
   (struct coordinate/s [])
   (define current-ctxt (make-parameter '()))
+  (define lookup-ctxt (make-parameter '()))
   
   (struct merge-rule/s [merge] #:transparent)
   (struct within?-rule/s [within?] #:transparent)
@@ -45,6 +47,8 @@
     [(_ name:id body)
      #'(define-syntax name (realizer/s body))]))
 
+
+
 (define-syntax (realize stx)
   (syntax-parse stx
     [(_ (perf arg ...) e ...)
@@ -55,10 +59,10 @@
 (define-for-syntax (realize-art-exprs stx exprs)
   (syntax-parse stx
     [(perf:id arg ...)
-     (define real (lookup #'perf))
+     (define real (syntax-local-value #'perf (λ () #f)))
      (unless real (raise-syntax-error 'realize (format "not a realizer") #'perf))
     
-     (parameterize ([current-ctxt exprs])
+     (parameterize ([current-ctxt exprs] [lookup-ctxt exprs])
        ((realizer/s-body real) (quasisyntax/loc stx (perf arg ...))))]))
 
 ;;;;;;; reflected context.
@@ -86,7 +90,7 @@
 
 (define-syntax (define-nonhom-merge-rule stx)
   (define (do-it lname rname remove body)
-     #`(begin-for-syntax (gvector-add! merge-rules 
+     #`(define-syntax _ (gvector-add! merge-rules 
          (merge-rule/s (λ (l r ctxt) 
                          (define l* (context-ref l #'#,lname))
                          (define r* (context-ref r #'#,rname))
@@ -98,30 +102,36 @@
 (define-syntax (define-hom-merge-rule stx)
   (syntax-parse stx
     [(_ name:id body)
-     #`(begin-for-syntax 
+     #`(define-syntax _
      (gvector-add! merge-rules 
-         (merge-rule/s (λ (l r ctxt) 
-                         (define l* (context-ref l #'name))
-                         (define r* (context-ref r #'name))
-                         (if (or l* r*) (put-in-ctxt r (body l* r* l r ctxt)) r)))))]))
+       (merge-rule/s (λ (l r ctxt) 
+                       (define l* (context-ref l #'name))
+                       (define r* (context-ref r #'name))
+                       (if (or l* r*) (put-in-ctxt r (body l* r* l r ctxt)) r)))))]))
 
 (define-syntax (define-hom-within?-rule stx)
   (syntax-parse stx
     [(_ name:id body)
-     #'(begin-for-syntax (gvector-add! within?-rules 
-         (within?-rule/s (λ (l r ctxt) 
-                           (define l* (context-ref l #'name))
-                           (define r* (context-ref r #'name))
-                           (if (and l* r*) (body l* r* l r ctxt) #t)))))]))
+     #'(define-syntax _ 
+         (gvector-add! within?-rules 
+           (within?-rule/s (λ (l r ctxt) 
+                             (define l* (context-ref l #'name))
+                             (define r* (context-ref r #'name))
+                             (cond
+                               [(and l* (not r*)) #t]
+                               [(and r* (not l*)) #f]
+                               [(and r* l*) (body l* r* l r ctxt)]
+                               [else #t])))))]))
 
 (define-syntax (define-nonhom-within?-rule stx)
   (syntax-parse stx
     [(_ lname:id rname:id body) 
-     #`(begin-for-syntax (gvector-add! within?-rules 
-         (within?-rule/s (λ (l r ctxt) 
-                           (define l* (context-ref l #'lname))
-                           (define r* (context-ref r #'rname))
-                           (if (and l* r*) (body l* r* l r ctxt) #t)))))]))
+     #`(define-syntax __
+         (gvector-add! within?-rules 
+           (within?-rule/s (λ (l r ctxt) 
+                             (define l* (context-ref l #'lname))
+                             (define r* (context-ref r #'rname))
+                             (if (and l* r*) (body l* r* l r ctxt) #t)))))]))
 
 (define-coordinate (art-id []))
 ;; FIXME jagen this will never run
@@ -156,7 +166,7 @@
     (unless result 
       (define msg 
         (format "no ~a in context. object: ~a. candidates: ~a" 
-          (syntax->datum head) (un-@ expr) (map un-@ (context-ref* (current-ctxt) head))))
+          (syntax->datum head) (un-@ expr) (map un-@ (context-ref* (lookup-ctxt) head))))
       (raise-syntax-error 'require-context msg expr))
     result)
 
@@ -228,43 +238,50 @@
       [({~datum @} coord inner-expr ...)
        (quasisyntax/loc expr (@ coord #,@(map un-@ (syntax->list #'(inner-expr ...)))))]
       [(head:id inner-expr ...)
-       #:when (lookup #'head embed/s?)
+       #:do [(define maybe-embed (syntax-local-value #'head (λ () #f)))]
+       #:when (embed/s? maybe-embed)
        (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] (head #,@(map un-@ (syntax->list #'(inner-expr ...))))))]
       [_ (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] #,expr))]))
 
   (define put-id #'art-id)
  
   (define-syntax (rewrite-in stx) 
-    (syntax-parse stx [(_ ctxt expr ...) #`(run-art-exprs (list expr ...) ctxt)]))
+    (syntax-parse stx [(_ ctxt expr ...) #`(run-art-exprs (list expr ...) ctxt (lookup-ctxt))]))
   (define-syntax (rewrite stx) (syntax-parse stx [(_ expr ...) #'(rewrite-in '() expr ...)]))
   (define-syntax (rewrite1 stx) 
     (syntax-parse stx [(_ expr ...) #'#`(context #,@(rewrite expr ...))]))
 
-  (define (run-art-exprs exprs ctxt)
-    (for/fold ([acc ctxt]) ([expr exprs]) (run-art-expr expr acc)))
 
-  (define (run-art-expr expr- ctxt)
+
+  (define (run-art-exprs exprs ctxt [lk-ctxt '()])
+    (for/fold ([acc ctxt]) ([expr exprs]) (run-art-expr expr acc (append acc lk-ctxt))))
+
+  (define (run-art-expr expr- ctxt [lk-ctxt '()])
     (define expr (ensure-id-ctxt expr-))
     (syntax-parse expr
       [({~datum context} inner-expr ...) 
        (run-art-exprs
          (for/list ([b (syntax->list #'(inner-expr ...))])
-           (set-id-ctxt b (merge-coordinates (get-id-ctxt expr) (or (get-id-ctxt b) '()) (current-ctxt)))) ctxt)]
+           (set-id-ctxt b (merge-coordinates (get-id-ctxt expr) (or (get-id-ctxt b) '()) (current-ctxt)))) 
+         ctxt lk-ctxt)]
       [({~datum delete-by-id} the-id:id) (filter (λ(expr) (not (free-identifier=? #'the-id (expr-id expr)))) ctxt)]
-      [({~datum replace-full-context} body ...) (map ensure-id-ctxt (syntax->list #'(body ...)))]
+      [({~datum replace-full-context} body ...) 
+       (println "AND HERE") (run-art-exprs (map ensure-id-ctxt (syntax->list #'(body ...))) '() '())]
       [({~datum debug-realize} (perf:id arg ...))
        (displayln
          (eval-syntax
-           (parameterize ([current-ctxt ctxt])
-             ((realizer/s-body (lookup #'perf)) (quasisyntax/loc expr (perf arg ...))))))
+           (parameterize ([current-ctxt ctxt] [lookup-ctxt lk-ctxt])
+             ((realizer/s-body (syntax-local-value #'perf)) (quasisyntax/loc expr (perf arg ...))))))
        ctxt]
       [(object:id arg ...)
-       #:do [(define maybe-obj (lookup #'object object/s?)) (define maybe-embed (lookup #'object embed/s?))]
-       #:when (or maybe-obj maybe-embed)
+       #:do [(define maybe-obj (syntax-local-value #'object (λ () #f)))]
+       #:when (or (embed/s? maybe-obj) (object/s? maybe-obj))
        (define expr*
          (cond
-           [maybe-embed
-            (with-syntax ([(new-exprs ...) ((embed/s-compile maybe-embed) expr ctxt)])
+           [(embed/s? maybe-obj)
+            (with-syntax ([(new-exprs ...) 
+                           (parameterize ([current-ctxt ctxt] [lookup-ctxt lk-ctxt])
+                             ((embed/s-compile maybe-obj) expr ctxt))])
               (set-id-ctxt (qq-art expr (object new-exprs ...)) (get-id-ctxt expr)))]
            [else expr]))
                 
@@ -276,9 +293,25 @@
        ;; FIXME jagen fixme
        (append ctxt (list expr**))]
       [(rewriter:id arg ...)
-       #:when (lookup #'rewriter rewriter/s?)
-       #;(displayln (format "rewriting with ~s" (syntax->datum #'rewriter)))
-       (define realized (parameterize ([current-ctxt ctxt]) ((rewriter/s-body (lookup #'rewriter)) expr)))
-       (run-art-expr (ensure-id-ctxt realized) ctxt)]
+       #:when (rewriter/s? (syntax-local-value #'rewriter (λ () #f)))
+       (displayln (format "rewriting with ~s" (syntax->datum #'rewriter)))
+       (define realized (parameterize ([current-ctxt ctxt] [lookup-ctxt lk-ctxt]) ((rewriter/s-body (syntax-local-value #'rewriter)) expr)))
+       (run-art-expr (ensure-id-ctxt realized) ctxt lk-ctxt)]
       [(unknown:id arg ...)
-       (raise-syntax-error 'run-art-expr (format "unknown object/context/rewriter: ~a" (syntax->datum expr)) expr)])))
+       (raise-syntax-error 'run-art-expr (format "unknown object/context/rewriter: ~a" (syntax->datum expr)) expr)]
+      [id:id
+       #:do [(define var (syntax-local-value #'id (λ () #f)))]
+       #:fail-unless (art-var/s? var) (raise-syntax-error 'run-art-expr (format "unknown var: ~s" #'id) #'id)
+       (run-art-expr (qq-art #'id (context #,@(art-var/s-value var))) ctxt lk-ctxt)])))
+
+(begin-for-syntax
+  (define defined-arts (mutable-free-id-set)))
+
+(define-syntax (define-art stx)
+  (syntax-parse stx
+    [(_ name:id body ...)
+       #`(begin
+           (define-syntax name 
+             (art-var/s (map (λ (e) (remove-from-id-ctxt (ensure-id-ctxt e) #'art-id))
+                             (rewrite #'body ...))))
+           (begin-for-syntax (set-add! defined-arts #'name)))]))

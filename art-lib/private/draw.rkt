@@ -32,7 +32,7 @@
            (do-draw-trace (syntax->list #'(expr ...)) width height '() #'empty-image (λ (x) (list #`(head #,@(embed x))))))
          (values c #`(above/align 'left (text #,(format "~a:" (symbol->string (syntax->datum #'head))) 20 'purple) #,i))]
         [_
-         (define rewriter-image (realize-art-exprs #'(draw-quoted yellow) (list e)))
+         (define rewriter-image (realize-art-exprs #'(draw-quoted goldenrod) (list e)))
          (define rewriter-image*
            #`(above/align 'left  #,rewriter-image (rectangle 10 10 'solid 'transparent) (draw-arrow (image-width #,rewriter-image)'purple)))
          (define rewritten (run-art-expr e acc))

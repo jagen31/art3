@@ -135,7 +135,7 @@
       (define maxs 
         (for/list ([ix (get-index-range aix)]) (do-op (context-ref/index a-values ix) (context-ref/index w-values ix) ix)))
 
-      (define result (run-art-exprs maxs '()))
+      (define result (run-art-exprs maxs '() (lookup-ctxt)))
       (apl-value/s result))
 
 (define-syntax apl:max (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically max stx a w))))
@@ -403,6 +403,8 @@
        (define result (eval-apl-expr #'expr (free-id-table-set (make-immutable-free-id-table) #'*ctxt* (apl-value/s (current-ctxt)))))
        #`(context #,@(apl-value/s-val result))])))
 
+#;(module+ test
+
 (println "catenate")
   (realize (quote-realizer)
     (ix-- (seq (numbers 2 2 2)))
@@ -436,7 +438,6 @@
   (numbers 10 3 0 2 0)
   (run-apl (reduce apl:- *ctxt*)))
 
-#;(module+ test
   (println "THE BIG MONEY")
   (realize (quote-realizer) #;(draw-seq-realizer [800 400] [number-drawer])
     (ix-- (seq (ix-- (numbers 1 2 3) (numbers 4 5 6))) (seq (ix-- (numbers 7 8 9))) (seq (ix-- (numbers 10 11 20))))

@@ -1,11 +1,60 @@
 #lang racket
 
-(require art/private/core art/coordinate/interval art/coordinate/instant art/coordinate/switch 
+(require art art/private/core art/coordinate/interval art/coordinate/instant art/coordinate/switch 
          art/private/lib art/sequence 2htdp/image 
-         (for-syntax syntax/parse racket/list))
+         (for-syntax racket/format syntax/parse racket/list racket/math racket/match))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 (define-interval-coordinate interval)
+
+;;;;;;; time context.
+(define-art-embedding (timeline [items])
+  (λ (stx ctxt)
+    (syntax-parse stx
+      [(head:id expr ...)
+       (rewrite (quasisyntax/loc stx (context expr ...)))])))
+
+(define-drawer draw-timeline 
+  (λ (stx)
+    (syntax-parse stx
+      [(_ expr ...)
+       (define ctxt (syntax->list #'(expr ...)))
+  (define max-end
+    (for/fold ([acc 1]) ([e ctxt])
+      (define end (expr-interval-end e))
+      (if (infinite? end) acc (max acc end))))
+
+  (define each-width (/ (drawer-width) max-end))
+  (define line
+    (for/fold ([im #'empty-image])
+              ([i (in-range max-end 2)])
+      #`(beside #,im 
+          (overlay (text #,(~s (add1 i)) 16 'blue) 
+                   (rectangle #,(* each-width 2) 10 'solid 'transparent)))))
+
+
+    (for/fold ([im #`(rectangle #,(drawer-width) #,(drawer-height) 'solid 'transparent)])
+                ([e ctxt])
+        (match-define (cons start end) (expr-interval e))
+
+        (define end* (if (infinite? end) max-end end))
+        (define x-start (* start each-width))
+        (define x-end (* end* each-width))
+        (define width* (- x-end x-start))
+
+        (define sub-pic 
+          (parameterize ([drawer-width width*]) 
+            (drawer-recur e)))
+
+        #`(overlay/xy
+            (add-line (add-line (add-line
+              #,sub-pic 
+              0 10 #,width* 10 'purple)
+              0 0 0 20 'purple)
+              #,width* 0 #,width* 20 'purple)
+              #,(- x-start) #,(- (/ (drawer-height) 2)) #,im))])))
+
+(register-drawer! timeline draw-timeline)
 
 ;;;;;;;;;; INTERVAL
 
@@ -55,16 +104,23 @@
 
 (define-art-rewriter translate
   (syntax-parser
-    [(_ value:number)
-     #:with (result ...) (for/foldr ([acc '()]) 
-                ([expr (current-ctxt)])
-       (define-values (the-start the-end) (syntax-parse (context-ref (get-id-ctxt expr) #'interval) [({~literal interval} ({~datum start} s) ({~datum end} e)) (values #'s #'e)]))
-       (cons (delete-expr expr)
-         (cons (qq-art expr 
-           ;; FIXME jagen
-           (@ [(interval (start value) (end +inf.0))] 
-             (@ [#,@(get-id-ctxt expr)] (put #,expr)))) acc)))
-     (qq-art this-syntax (@ () result ...))]))
+    [(_ value:number) 
+     (define exprs (filter (λ (x) (context-within? (get-id-ctxt x) (get-id-ctxt this-syntax) (lookup-ctxt))) (current-ctxt)))
+     #`(context #,@(map delete-expr exprs) (i@ value #,@exprs))]))
+
+(define-art-rewriter dilate
+  (syntax-parser
+    [(_ value:number) 
+     (define exprs (filter (λ (x) (context-within? (get-id-ctxt x) (get-id-ctxt this-syntax) (lookup-ctxt))) (current-ctxt)))
+     (println "HERE!")
+     (define result (for/list ([e exprs])
+       (define start (expr-interval-start e))
+       (if start
+         #`(i@ [#,start #,(* (syntax-e #'value) (expr-interval-end e))] #,(qq-art e #,(remove-from-id-ctxt e #'interval)))
+         e)))
+         (println "HERE@")
+     #`(replace-full-context #,@result)]))
+
 
 
 ;; rhythms combine with seqs to place objects in intervals.  This could probably be generalized to
@@ -83,9 +139,11 @@
 
 (define-for-syntax (do-apply-rhythm stx r exprs)
 
-  (define seq (context-ref/surrounding (current-ctxt) (get-id-ctxt r) #'seq))
-  (define items 
+  (define seq (require-context (current-ctxt) r #'seq))
+  (define items-
     (syntax-parse seq [(_ seq-expr ...) (syntax->list #'(seq-expr ...))]))
+
+  (define items (sort items- < #:key expr-single-index))
 
   (with-syntax ([(result ...) 
     (for/list ([e exprs] [i (in-naturals)])
@@ -96,24 +154,29 @@
 ;; holes indicate spaces where objects should go.  They work well with rhythms.
 (define-art-object (hole []))
 
-(define-mapping-rewriter (fill-holes [(: h hole)])
-  (λ (stx h)
+(define-art-rewriter fill-holes
+  (λ (stx)
     (syntax-parse stx
       [(_ head:id)
-       (define its (require-context (current-ctxt) h #'head))
-       (qq-art h (@ () #,@(map delete-expr its) #,(delete-expr h) #,@its))])))
+       #:do [
+       (define-values (holes items)
+         (values (context-ref*/within (current-ctxt) (get-id-ctxt stx) #'hole)
+                 (context-ref*/within (current-ctxt) (get-id-ctxt stx) #'head)))]
+       #:with (result ...)
+         (for/fold ([acc '()] #:result (reverse acc))
+                   ([h holes])
+           (define items* (context-ref*/surrounding items (get-id-ctxt h) #'head))
+           (append (map (λ (e) (qq-art h #,(remove-from-id-ctxt e #'interval))) items*) acc))
+       #`(context #,@(map delete-expr items) #,@(map delete-expr holes) result ...)])))
 
 (define-mapping-rewriter (rhythm->holes [(: r rhythm)])
   (λ (stx r)
     ;; cheeky implementation
     (syntax-parse r
       [(_ num:number ...)
-       #:with r* r
        #:with (hole* ...) 
          (build-list (length (syntax->list #'(num ...))) (λ (_) #'(hole)))
-       #:with hole-seq #'(seq (ix-- hole* ...))
-       #:with app #'(apply-rhythm)
-       (qq-art r (pocket-rewrite hole-seq r* app))])))
+       (qq-art r (context #,@(rewrite #'(seq (ix-- hole* ...)) r #'(apply-rhythm))))])))
 
 (define-art-object (divisions [n]))
 
@@ -126,20 +189,32 @@
        (define exprs
          (flatten
            (for/list ([expr (current-ctxt)])
-             (define-values (s e) 
-               (syntax-parse (context-ref (get-id-ctxt expr) #'interval)
-                 [(_ (_ s:number) (_ e:number))
-                  (values (syntax-e #'s) (syntax-e #'e))]))
+             (define-values (s e) (values (expr-interval-start expr) (expr-interval-end expr)))
              (define s* (* s division))
              (define e* (* e division))
              (define (round+ensure-whole n)
                (define rounded (round n))
-               (and (< (- rounded n) ε) (> (- rounded n) (- ε)) (inexact->exact rounded)))
+               (if (infinite? rounded)
+                   rounded
+                   (and (< (- rounded n) ε) (> (- rounded n) (- ε)) (inexact->exact rounded))))
               
              (define s** (or (round+ensure-whole s*) (raise-syntax-error 'exact-subdivide "score does not subdivide into the given number of divisions." expr)))
              (define e** (or (round+ensure-whole e*) (raise-syntax-error 'exact-subdivide "score does not subdivide into the given number of divisions." expr)))
-             (list (delete-expr expr) (put-in-id-ctxt expr #'(interval (start #,s**) (end #,e**)))))))
-       #`(@ () #,@(cons (qq-art #'division* (divisions division*)) exprs))])))
+             (list (delete-expr expr) 
+                   (put-in-id-ctxt (remove-from-id-ctxt expr #'interval) 
+                                   #`(interval (start #,s**) (end #,e**)))))))
+       #`(context #,(qq-art stx (divisions division*)) #,@exprs)])))
+
+
+(define-art-rewriter unsubdivide
+  (λ (stx)
+    (define divs (context-ref*/within (current-ctxt) (get-id-ctxt stx) #'divisions))
+    (define result
+      (for/fold ([acc (current-ctxt)])
+                ([div divs])
+        (define/syntax-parse (_ ds) div)
+        (run-art-exprs (list (qq-art div (dilate #,(/ 1 (syntax-e #'ds)))) (delete-expr div)) (current-ctxt))))
+    #`(replace-full-context #,@result)))
 
 (define-art-rewriter apply-rhythm*
   (λ (stx)
@@ -153,7 +228,7 @@
       [(_ expr:number ...)
        (do-apply-rhythm stx r (syntax->list #'(expr ...)))])))
 
-(realize (quote-realizer)
+#;(realize (quote-realizer)
   (seq (ix-- (dumb) (dumber) (dumbest)))
   (rhythm 3 4 5)
   (apply-rhythm))

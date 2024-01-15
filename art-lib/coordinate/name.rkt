@@ -1,6 +1,6 @@
 #lang racket
 
-(require art/private/core (for-syntax syntax/parse racket/list racket/syntax))
+(require art/private/core (for-syntax syntax/parse racket/list racket/syntax racket/string))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 ;;;;;;;;;;; NAME COORDINATE CLASS
@@ -22,7 +22,7 @@
       (unless l (break r))
       (unless r (break l))
       (syntax-parse #`(#,l #,r)
-        [((_ namel:number (... ...)) (__ namer:number (... ...)))
+        [((_ namel (... ...)) (__ namer (... ...)))
          (qq-art r (name namel (... ...) namer (... ...)))]))))
   
 (define-hom-within?-rule name (λ (l r _ __ ___)
@@ -35,9 +35,7 @@
 
 (define-for-syntax (expr-single-name stx)
   (define names (expr-name stx))
-  (if (and (not (empty? names)) (null? (cdr names)))
-    (car names)
-    (raise-syntax-error 'expr-single-name (format "expr must be rank 1, got name: ~s" names) stx)))
+  (format-id #f (string-join (map (compose symbol->string syntax->datum) names) ".")))
 
 (define-for-syntax (expr-name stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'name) 
