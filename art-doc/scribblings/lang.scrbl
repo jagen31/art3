@@ -10,9 +10,7 @@
 @section{Notations: the art forms}
 
 @racketgrammar*[#:literals (put delete-by-id \@ ...)
-  (art-expr (code:line (put art-object ...))
-            (code:line (delete-by-id id ...))
-            (code:line (\@ [art-object ...] art-expr ...))
+  (art-expr (code:line (delete-by-id id ...))
             (code:line (art-object-id racket-expr ...))
             (code:line (art-rewriter-id racket-expr ...)))]
 

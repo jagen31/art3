@@ -1,6 +1,6 @@
 #lang racket
 
-(require art art/sequence art/coordinate/index (for-syntax syntax/parse racket/list syntax/id-table))
+(require art/base art/sequence art/coordinate/index (for-syntax syntax/parse racket/list syntax/id-table))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 ;; FIXME jagen segregate ravel (its just apl) into: 
@@ -117,18 +117,18 @@
            #:do [(define l* (syntax-e #'l))]
            #:with (expr* ...) 
              (for/list ([e (syntax->list #'(expr ...))])
-               (qq-art e (number #,(* l* (number-value e)))))
+               (qq-art e (number #,(f l* (number-value e)))))
            (qq-art stx (ix@ #,ix (seq expr* ...)))]
           [(({~literal seq} expr ...) ({~literal number} r:number))
            #:do [(define r* (syntax-e #'r))]
            #:with (expr* ...) 
              (for/list ([e (syntax->list #'(expr ...))])
-               (qq-art e (number #,(* r* (number-value e)))))
+               (qq-art e (number #,(f r* (number-value e)))))
            (qq-art stx (ix@ #,ix (seq expr* ...)))]
           [(({~literal seq} exprl ...) ({~literal seq} exprr ...))
            #:with (expr* ...) 
              (for/list ([l (syntax->list #'(exprl ...))] [r (syntax->list #'(exprr ...))])
-               (qq-art l (number #,(* (number-value l) (number-value r)))))
+               (qq-art l (number #,(f (number-value l) (number-value r)))))
            (qq-art stx (ix@ #,ix (seq expr* ...)))]))
 
 
@@ -150,10 +150,6 @@
 (define-for-syntax (window-list li n)
   (for/list ([i (in-range (- (length li) (sub1 n)))])
     (map (λ (ix) (list-ref li ix)) (range i (+ i n)))))
-
-(define-for-syntax (to-foldr-order li)
-  (define revd (reverse li))
-  (cons (cadr revd) (cons (car revd) (cddr revd))))
 
 (define-syntax reduce
   (apl-dyad/s

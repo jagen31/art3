@@ -246,7 +246,7 @@
   (define put-id #'art-id)
  
   (define-syntax (rewrite-in stx) 
-    (syntax-parse stx [(_ ctxt expr ...) #`(run-art-exprs (list expr ...) ctxt (lookup-ctxt))]))
+    (syntax-parse stx [(_ ctxt expr ...) #`(run-art-exprs (list expr ...) ctxt (append ctxt (lookup-ctxt)))]))
   (define-syntax (rewrite stx) (syntax-parse stx [(_ expr ...) #'(rewrite-in '() expr ...)]))
   (define-syntax (rewrite1 stx) 
     (syntax-parse stx [(_ expr ...) #'#`(context #,@(rewrite expr ...))]))
@@ -266,7 +266,7 @@
          ctxt lk-ctxt)]
       [({~datum delete-by-id} the-id:id) (filter (λ(expr) (not (free-identifier=? #'the-id (expr-id expr)))) ctxt)]
       [({~datum replace-full-context} body ...) 
-       (println "AND HERE") (run-art-exprs (map ensure-id-ctxt (syntax->list #'(body ...))) '() '())]
+       (run-art-exprs (map ensure-id-ctxt (syntax->list #'(body ...))) '() '())]
       [({~datum debug-realize} (perf:id arg ...))
        (displayln
          (eval-syntax
@@ -294,7 +294,7 @@
        (append ctxt (list expr**))]
       [(rewriter:id arg ...)
        #:when (rewriter/s? (syntax-local-value #'rewriter (λ () #f)))
-       (displayln (format "rewriting with ~s" (syntax->datum #'rewriter)))
+       #;(displayln (format "rewriting with ~s" (syntax->datum #'rewriter)))
        (define realized (parameterize ([current-ctxt ctxt] [lookup-ctxt lk-ctxt]) ((rewriter/s-body (syntax-local-value #'rewriter)) expr)))
        (run-art-expr (ensure-id-ctxt realized) ctxt lk-ctxt)]
       [(unknown:id arg ...)

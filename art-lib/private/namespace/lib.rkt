@@ -1,6 +1,6 @@
 #lang racket
 
-(require art art/coordinate/name 2htdp/image 
+(require art/base art/coordinate/name 2htdp/image 
          (for-syntax racket/string syntax/parse racket/list syntax/id-set syntax/id-table 
                      racket/dict racket/set racket/function))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
@@ -11,8 +11,7 @@
   (λ (stx)
     (syntax-parse stx
       [(_ n:id expr ...) (qq-art stx (name@ [n] expr ...))]
-      [(_ (n:id ...) expr ...) 
-       (qq-art stx (@ [(name n ...)] expr ...))])))
+      [(_ (n:id ...) expr ...) (qq-art stx (@ [(name n ...)] expr ...))])))
 
 (define-art-embedding (namespace [items])
   (λ (stx ctxt)
@@ -21,27 +20,14 @@
        (rewrite (quasisyntax/loc stx (context expr ...)))])))
 
 (define-mapping-rewriter (rewrite-in-namespace [(: s namespace)])
-  (let ()
-    (define (go stx s)
-      (syntax-parse stx
-        [(_ expr ... {~seq #:capture [name:id ...]})
-         (syntax-parse s
-           [(_ expr* ...)
-             #:do [
-              (define names (immutable-free-id-set (syntax->list #'(name ...))))
-              (define captures 
-                (if (attribute name)
-                  (filter 
-                    (λ (e) (syntax-parse e 
-                      [(head:id _ ...) (free-id-set-member? names #'head)]))
-                    (current-ctxt))
-                  '()))]
-             #:with (result ...) 
-               (rewrite-in (append captures (syntax->list #'(expr* ...))) #`(context expr ... #,@(map delete-expr captures)))
-             #`(context #,(qq-art s (namespace result ...)))])]
-       ;; FIXME jagen
-       [(head expr ...) (go #'(head expr ... #:capture []) s)]))
-    go))
+  (λ (stx s)
+    (syntax-parse stx
+      [(_ expr ...)
+       (syntax-parse s
+         [(_ expr* ...)
+           #:with (result ...) 
+             (rewrite-in (syntax->list #'(expr* ...)) #'(context expr ...))
+           #`(context #,(qq-art s (namespace result ...)))])])))
 
 (define-art-object (ref []))
 
@@ -49,15 +35,15 @@
   (λ (stx r)
     (syntax-parse r
       [(_ n:id)
-                        
-       (qq-art r
-         (context
-           #,@(map
-                (λ (x) (remove-from-id-ctxt x #'name))
-                (filter (λ (e) 
-                  (and (not (null? (expr-name e)))
-                       (context-within? (put-in-ctxt (get-id-ctxt r) #'(name n)) (get-id-ctxt e) (current-ctxt))))
-                  (current-ctxt)))))])))
+       #:with (result ...)
+       (map
+         (λ (x) (remove-from-id-ctxt x #'name))
+         (filter 
+           (λ (e) 
+             (and (not (null? (expr-name e)))
+                  (context-within? (put-in-ctxt (get-id-ctxt r) #'(name n)) (get-id-ctxt e) (current-ctxt))))
+           (current-ctxt)))
+       (qq-art r (context result ...))])))
   
 (define-drawer draw-namespace
   (λ (stx)
@@ -67,15 +53,19 @@
          (for/fold ([by-name (make-immutable-free-id-table)])
                    ([expr (syntax->list #'(expr ...))])
            (define name- (expr-single-name expr))
+           ;; FIXME jagen yuck. make a better model.
            (define name (if (free-identifier=? name- #'||) #'<no-name> name-))
            (dict-update by-name name (curry cons expr) (λ () '()))))
        (for/fold ([im #'empty-image])
                  ([(k v) (in-dict by-name)])
-         #`(above/align 'left #,im (text #,(format "~a ::=" (syntax->datum k)) 24 'blue) (above #,@(map drawer-recur v) empty-image)))])))
+         #`(above/align 'left 
+             #,im 
+             (text #,(format "~a ::=" (syntax->datum k)) 24 'blue) 
+             (above #,@(map drawer-recur v) empty-image)))])))
 
 (register-drawer! namespace draw-namespace)
 
-(define-art-rewriter reflect-art-definitions
+(define-art-rewriter reify-art-definitions
   (λ (stx)
     (define result
       (for/list ([id (in-set defined-arts)])
