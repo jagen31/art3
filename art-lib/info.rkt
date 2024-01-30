@@ -6,7 +6,6 @@
 
 (define deps
   '(["base" #:version "8.9"]
-    ["collections-lib" #:version "1.3"]
-    "syntax-spec"))
+    ["collections-lib" #:version "1.3"]))
 (define build-deps
   '())
