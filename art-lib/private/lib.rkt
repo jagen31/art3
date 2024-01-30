@@ -3,7 +3,7 @@
 (require art/private/core art/private/draw 
          art/coordinate/instant art/coordinate/index art/coordinate/interval art/coordinate/subset art/coordinate/switch
          2htdp/image
-         (for-syntax syntax/parse racket/list racket/match (except-in ee-lib racket-var) syntax/id-table syntax/id-set))
+         (for-syntax syntax/parse racket/list racket/match syntax/id-table syntax/id-set))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 (define-art-object (number [n]))
@@ -86,8 +86,8 @@
     (syntax-parse stx
       [(_ {~and left-expr (left-rw:id _ ...)} {~and right-expr (right-rw:id _ ...)})
        
-       (define rw1 (lookup #'left-rw rewriter/s?))
-       (define rw2 (lookup #'right-rw rewriter/s?))
+       (define rw1 (syntax-local-value #'left-rw))
+       (define rw2 (syntax-local-value #'right-rw))
 
        (define set1 ((rewriter/s-body rw1) (qq-art stx left-expr)))
        (define set2 ((rewriter/s-body rw2) (qq-art stx right-expr)))
@@ -113,7 +113,7 @@
            (define clauses 
              (flatten
                (for/list ([subn (syntax->list #'(sub-name ...))])
-                 (define subperf (lookup subn))
+                 (define subperf (syntax-local-value subn))
                  ((art-subrealizer/s-body subperf) (current-ctxt)))))
            #`(let () init-statement ... #,(combiner clauses))))]))
 
@@ -175,7 +175,7 @@
                    ([expr (filter (λ (expr) (context-within? (get-id-ctxt expr) (or (get-id-ctxt stx) '()) (current-ctxt))) (current-ctxt))])
            (syntax-parse expr
              [(head:id arg ...)
-              #:do [(define interp-struct (lookup #'head interp/s?))]
+              #:do [(define interp-struct (syntax-local-value #'head))]
               #:when (and interp-struct (free-identifier=? (interp/s-parent interp-struct) #'interp*))
               #:do [(define new-expr (interp/s-body interp-struct))] 
               (cons (qq-art expr #,new-expr) (cons (delete-expr expr) acc))]
