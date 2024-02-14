@@ -76,7 +76,7 @@
        #:with (result ...)
          (for/fold ([acc '()] [t (syntax-e #'start*)] #:result (reverse acc))
                    ([box (syntax->list #'(box ...))] [l (syntax->list #'(len ...))] [e (syntax->list #'((expr ...) ...))])
-           (values (cons #`(i@ [#,t #,(+ t (syntax-e l))] #,@e) acc) (+ t (syntax-e l))))
+           (values (cons #`(i@ [#,t #,(+ t (syntax-e l))] #,@(syntax->list e)) acc) (+ t (syntax-e l))))
        (qq-art this-syntax (@ () result ...))]
       [(_ expr ...) (qq-art this-syntax (-- 0 expr ...))])))
 
@@ -155,12 +155,19 @@
 
 (define-art-rewriter uniform-rhythm
   (λ (stx)
-    (syntax-parse (context-ref (get-id-ctxt stx) #'interval)
-      [(_ (start s) (end e))
-       (syntax-parse stx
-        [(_ val:number)
-         (define num (inexact->exact (floor (/ (- (syntax-e #'e) (syntax-e #'s)) (syntax-e #'val)))))
-         (qq-art stx (rhythm #,@(build-list num (λ (_) #'val))))])])))
+    (define-values (d v) 
+      (syntax-parse stx 
+        [(_ iv:number v:number) (values (syntax-e #'iv) (syntax-e #'v))]
+        [(_ v:number) (values (- (expr-interval-end stx) (expr-interval-start stx)) (syntax-e #'v))]))
+    (define num (inexact->exact (floor (/ d v))))
+    (qq-art stx (rhythm #,@(build-list num (λ (_) v))))))
+
+(define-art-rewriter uniform-rhythm*
+  (λ (stx)
+    (syntax-parse stx
+      [(_ expr ...) 
+       #:with (result ...) (rewrite (qq-art stx (context (uniform-rhythm expr ...) (apply-rhythm))))
+       (qq-art stx (context result ...))])))
 
 (define-for-syntax (do-apply-rhythm stx r exprs)
 
@@ -173,6 +180,7 @@
   (with-syntax ([(result ...) 
     (for/list ([e exprs] [i (in-naturals)])
       #`[#,e #,(quasisyntax/loc stx #,(remove-from-id-ctxt (list-ref items i) #'index))])])
+
 
     (qq-art r (context #,(delete-expr seq) (-- 0 result ...)))))
 
@@ -211,7 +219,7 @@
       [(_ num:number ...)
        #:with (hole* ...) 
          (build-list (length (syntax->list #'(num ...))) (λ (_) #'(hole)))
-       #`(context #,@(rewrite #'(seq (ix-- hole* ...)) r #'(apply-rhythm)))])))
+       (qq-art r (context #,@(run-art-exprs (list #'(seq (ix-- hole* ...)) (set-id-ctxt r '()) #'(apply-rhythm)) '() '())))])))
 
 (define-art-object (divisions [n]))
 
@@ -251,11 +259,12 @@
         (run-art-exprs (list (qq-art div (dilate #,(/ 1 (syntax-e #'ds)))) (delete-expr div)) (current-ctxt))))
     #`(replace-full-context #,@result)))
 
-(define-art-rewriter apply-rhythm*
+(define-art-rewriter rhythm*
   (λ (stx)
     (syntax-parse stx
-      [(apply-rhythm* expr:number ...)
-       (do-apply-rhythm stx stx (syntax->list #'(expr ...)))])))
+      [(_ expr:number ...) 
+       #:with (result ...) (rewrite (qq-art stx (context (rhythm expr ...) (apply-rhythm))))
+      (qq-art stx (context result ...))])))
 
 (define-mapping-rewriter (apply-rhythm [(: rhythms rhythm)])
   (λ (stx r)

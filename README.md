@@ -1,5 +1,11 @@
 # The Art Language
 
+## INSTALL LOCALLY
+
+`make install`
+You must have `raco` installed and on the path.
+https://download.racket-lang.org/
+
 ## TODO
 
 - Fix the strange quasiquote unquote problem in rewriters (workaround is to use `with-syntax` instead.  which is probably better practice anyhow)
