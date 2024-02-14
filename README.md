@@ -1,10 +1,27 @@
 # The Art Language
 
-## INSTALL LOCALLY
+## Local Build
+
+You must have `raco` installed and on the path.
+
+https://download.racket-lang.org/
+
+### Install
 
 `make install`
-You must have `raco` installed and on the path.
-https://download.racket-lang.org/
+
+
+### Uninstall
+
+`make remove`
+
+### Build Docs
+
+`make build-docs`
+
+### View Docs
+
+`make docs`
 
 ## TODO
 
