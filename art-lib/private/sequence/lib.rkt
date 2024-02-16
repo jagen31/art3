@@ -72,27 +72,22 @@
 (define-art-rewriter seq-ref
   (syntax-parser
     [_ 
+     #:do [(define !s (context-ref*/within (lookup-ctxt) (get-id-ctxt this-syntax) #'!))]
      #:with (result ...)
-     (begin
-       (define-values (exprs deletes)
-         (for/fold ([acc1 '()] [acc2 '()] #:result (values (reverse acc1) (reverse acc2))) 
-                   ([expr (current-ctxt)])
-           (syntax-parse expr
-             [({~literal !} value:number)
-              (define items (require-context (lookup-ctxt) expr #'seq))
-              (syntax-parse items
-                [(_ the-items ...) 
-                 #:with the-item (or (findf (λ (expr) 
-                   (syntax-parse (or (context-ref (get-id-ctxt expr) #'index) #'(index -1))
-                     [(_ ix*:number) (= (syntax-e #'ix*) (syntax-e #'value))]))
-                   (syntax->list #'(the-items ...)))
-                  (raise-syntax-error 'seq-ref (format "No item with given index in sequence: ~s" (un-@ items)) expr))
-                 (values (cons (qq-art expr (context the-item)) acc1)
-                         (cons (delete-expr expr) acc2))])]
-             [_ (values acc1 acc2)])))
-        (append deletes exprs))
+       (for/list ([e !s])
+         (syntax-parse e
+           [({~literal !} value:number)
+            (define items (require-context (lookup-ctxt) e #'seq))
+            (syntax-parse items
+              [(_ the-items ...) 
+               #:with the-item (or (findf (λ (expr) 
+                 (syntax-parse (or (context-ref (get-id-ctxt expr) #'index) #'(index -1))
+                   [(_ ix*:number) (= (syntax-e #'ix*) (syntax-e #'value))]))
+                 (syntax->list #'(the-items ...)))
+                (raise-syntax-error 'seq-ref (format "No item with given index in sequence: ~s" (un-@ items)) e))
+               (qq-art e (context the-item))])]))
 
-     #'(@ () result ...)]))
+     #`(context #,@(map delete-expr !s) result ...)]))
 
 (define-for-syntax (do-draw-seq ctxt width height)
   (define max-ix
