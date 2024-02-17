@@ -1,7 +1,6 @@
 #lang racket
 
-(require rsound rsound/envelope
-         (for-syntax racket syntax/parse data/gvector syntax/id-set) 
+(require (for-syntax racket syntax/parse data/gvector syntax/id-set) 
          (for-meta 2 syntax/parse))
 
 (provide (all-defined-out) (for-syntax (all-defined-out)))
