@@ -113,7 +113,7 @@
        #:do [
         (define size (syntax-e #'size*))
         (define iv (context-ref (get-id-ctxt repeat) #'interval))
-        (unless iv (raise-syntax-error 'expand-loop
+        (unless iv (raise-syntax-error 'expand-repeat
           (format "repeat requires a beat interval, got: ~s" (syntax->datum (un-@ repeat))) repeat))
         (define iv* (car (merge-coordinates (list iv) (list #`(interval (start 0) (end #,size))) (lookup-ctxt))))
         (define id-ctxt (put-in-ctxt (get-id-ctxt repeat) iv*))
@@ -291,7 +291,9 @@
       #:with (sorted* ...) 
         (for/list ([expr sorted]) (remove-from-id-ctxt expr #'interval))
       #:with (r* ...) r
-      #`(@ () #,@(map delete-expr sorted) #,(qq-art stx (seq (ix-- sorted* ...))) #,(qq-art stx (rhythm r* ...)))])))
+      #`(context #,@(map delete-expr sorted) 
+          #,(remove-from-id-ctxt (qq-art stx (seq (ix-- sorted* ...))) #'art-id) 
+          #,(remove-from-id-ctxt (qq-art stx (rhythm r* ...)) #'art-id))])))
 
 
 (define-art-rewriter coalesce-seq

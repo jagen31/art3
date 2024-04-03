@@ -61,7 +61,7 @@
          #`(above/align 'left 
              #,im 
              (text #,(format "~a ::=" (syntax->datum k)) 24 'blue) 
-             (above #,@(map drawer-recur v) empty-image)))])))
+             (above #,@(map drawer-recur v) empty-image empty-image)))])))
 
 (register-drawer! namespace draw-namespace)
 
@@ -73,6 +73,21 @@
     (qq-art stx (context #,@result))))
 
 (define-art-realizer namespace-provide-realizer
+  (λ (stx)
+    (define exprs-by-name 
+      (for/fold ([exprs (make-immutable-free-id-table)])
+                ([e (current-ctxt)])
+        (if (cons? (expr-name e))
+          (dict-update exprs (expr-single-name e) 
+            (λ (x) (cons (un-@ (remove-from-id-ctxt e #'name)) x)) '())
+          exprs)))
+    (define result
+      (flatten 
+        (for/list ([(k v) (in-dict exprs-by-name)])
+          (list #`(define-art #,k #,@(reverse v)) #`(provide #,k)))))
+    #`(begin #,@result)))
+
+#;(define-art-realizer namespace-provide-realizer
   (λ (stx)
     (define exprs-by-name 
       (for/fold ([exprs (make-immutable-free-id-table)])

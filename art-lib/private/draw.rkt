@@ -13,7 +13,7 @@
               (parameterize ([drawer-width (syntax-e #'width)] 
                              [drawer-height (syntax-e #'height)]) 
                 (drawer-recur e)))
-         empty-image)])))
+         empty-image empty-image)])))
 
 (define (draw-arrow width color)
    (above/align 'right (line 10 5 color) (line width 0 color) (line 10 -5 color)))
@@ -35,7 +35,7 @@
          (define rewriter-image (realize-art-exprs #'(draw-quoted goldenrod) (list e)))
          (define rewriter-image*
            #`(above/align 'left  #,rewriter-image (rectangle 10 10 'solid 'transparent) (draw-arrow (image-width #,rewriter-image)'purple)))
-         (define rewritten (run-art-expr e acc))
+         (define rewritten (rewrite-in acc e))
          (define rewritten-image (realize-art-exprs #'(draw-realizer [800 100]) (embed rewritten)))
          (values rewritten #`(above/align 'left #,rewriter-image* #,rewritten-image))]))
     (values ctxt* #`(above/align 'left #,im #,im+))))

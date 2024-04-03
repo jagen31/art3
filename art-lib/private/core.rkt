@@ -41,28 +41,7 @@
     [(_ name:id body)
      #'(define-syntax name (rewriter/s body))]))
 
-(define-syntax (define-art-realizer stx)
-  (syntax-parse stx
-    [(_ name:id body)
-     #'(define-syntax name (realizer/s body))]))
 
-
-
-(define-syntax (realize stx)
-  (syntax-parse stx
-    [(_ (perf arg ...) e ...)
-     #:with (expr ...) (run-art-exprs (syntax->list #'(e ...)) '())
-
-     (realize-art-exprs #'(perf arg ...) (syntax->list #'(expr ...)))]))
-
-(define-for-syntax (realize-art-exprs stx exprs)
-  (syntax-parse stx
-    [(perf:id arg ...)
-     (define real (syntax-local-value #'perf (λ () #f)))
-     (unless real (raise-syntax-error 'realize (format "not a realizer") #'perf))
-    
-     (parameterize ([current-ctxt exprs] [lookup-ctxt exprs])
-       ((realizer/s-body real) (quasisyntax/loc stx (perf arg ...))))]))
 
 ;;;;;;; reflected context.
 (define-art-embedding (reflected [items])
@@ -244,28 +223,20 @@
 
   (define put-id #'art-id)
  
-  (define-syntax (rewrite-in stx) 
-    (syntax-parse stx [(_ ctxt expr ...) #`(run-art-exprs (list expr ...) ctxt (append ctxt (lookup-ctxt)))]))
-  (define-syntax (rewrite stx) (syntax-parse stx [(_ expr ...) #'(rewrite-in '() expr ...)]))
-  (define-syntax (rewrite1 stx) 
-    (syntax-parse stx [(_ expr ...) #'#`(context #,@(rewrite expr ...))]))
+  (define (run-art-exprs exprs ctxt [lk-ctxt '()] #:partial [partial? #f])
+    (for/fold ([acc ctxt]) ([expr exprs]) (run-art-expr expr acc (append acc lk-ctxt) #:partial partial?)))
 
-
-
-  (define (run-art-exprs exprs ctxt [lk-ctxt '()])
-    (for/fold ([acc ctxt]) ([expr exprs]) (run-art-expr expr acc (append acc lk-ctxt))))
-
-  (define (run-art-expr expr- ctxt [lk-ctxt '()])
+  (define (run-art-expr expr- ctxt [lk-ctxt '()] #:partial [partial? #f])
     (define expr (ensure-id-ctxt expr-))
     (syntax-parse expr
       [({~datum context} inner-expr ...) 
        (run-art-exprs
          (for/list ([b (syntax->list #'(inner-expr ...))])
            (set-id-ctxt b (merge-coordinates (get-id-ctxt expr) (or (get-id-ctxt b) '()) (current-ctxt)))) 
-         ctxt lk-ctxt)]
+         ctxt lk-ctxt #:partial partial?)]
       [({~datum delete-by-id} the-id:id) (filter (λ(expr) (not (free-identifier=? #'the-id (expr-id expr)))) ctxt)]
       [({~datum replace-full-context} body ...) 
-       (run-art-exprs (map ensure-id-ctxt (syntax->list #'(body ...))) '() '())]
+       (run-art-exprs (map ensure-id-ctxt (syntax->list #'(body ...))) '() '() #:partial partial?)]
       [({~datum debug-realize} (perf:id arg ...))
        (displayln
          (eval-syntax
@@ -274,10 +245,10 @@
        ctxt]
       [(object:id arg ...)
        #:do [(define maybe-obj (syntax-local-value #'object (λ () #f)))]
-       #:when (or (embed/s? maybe-obj) (object/s? maybe-obj))
+       #:when (or (embed/s? maybe-obj) (object/s? maybe-obj) (coordinate/s? maybe-obj))
        (define expr*
          (cond
-           [(embed/s? maybe-obj)
+           [(and (not partial?) (embed/s? maybe-obj))
             (with-syntax ([(new-exprs ...) 
                            (parameterize ([current-ctxt ctxt] [lookup-ctxt lk-ctxt])
                              ((embed/s-compile maybe-obj) expr ctxt))])
@@ -294,14 +265,22 @@
       [(rewriter:id arg ...)
        #:when (rewriter/s? (syntax-local-value #'rewriter (λ () #f)))
        #;(displayln (format "rewriting with ~s" (syntax->datum #'rewriter)))
-       (define realized (parameterize ([current-ctxt ctxt] [lookup-ctxt lk-ctxt]) ((rewriter/s-body (syntax-local-value #'rewriter)) expr)))
-       (run-art-expr (ensure-id-ctxt realized) ctxt lk-ctxt)]
+       (define realized (parameterize ([current-ctxt ctxt] [lookup-ctxt lk-ctxt]) 
+         ((rewriter/s-body (syntax-local-value #'rewriter)) (put-in-id-ctxt expr #`(#,put-id #,(gensym))))))
+       (run-art-expr (ensure-id-ctxt realized) ctxt lk-ctxt #:partial partial?)]
       [(unknown:id arg ...)
        (raise-syntax-error 'run-art-expr (format "unknown object/context/rewriter: ~a" (syntax->datum expr)) expr)]
       [id:id
        #:do [(define var (syntax-local-value #'id (λ () #f)))]
        #:fail-unless (art-var/s? var) (raise-syntax-error 'run-art-expr (format "unknown var: ~s" #'id) #'id)
-       (run-art-expr (qq-art #'id (context #,@(art-var/s-value var))) ctxt lk-ctxt)])))
+       (run-art-expr (qq-art #'id (context #,@(art-var/s-value var))) ctxt lk-ctxt)]))
+
+
+  (define-syntax (rewrite-in stx) 
+    (syntax-parse stx [(_ ctxt expr ...) #`(run-art-exprs (list expr ...) ctxt (append ctxt (lookup-ctxt)))]))
+  (define-syntax (rewrite stx) (syntax-parse stx [(_ expr ...) #'(rewrite-in '() expr ...)]))
+  (define-syntax (rewrite1 stx) 
+    (syntax-parse stx [(_ expr ...) #'#`(context #,@(rewrite expr ...))])))
 
 (begin-for-syntax
   (define defined-arts (mutable-free-id-set)))
@@ -314,3 +293,26 @@
              (art-var/s (map (λ (e) (remove-from-id-ctxt (ensure-id-ctxt e) #'art-id))
                              (rewrite #'body ...))))
            (begin-for-syntax (set-add! defined-arts #'name)))]))
+
+           (define-syntax (define-art-realizer stx)
+  (syntax-parse stx
+    [(_ name:id body)
+     #'(define-syntax name (realizer/s body))]))
+
+
+
+(define-syntax (realize stx)
+  (syntax-parse stx
+    [(_ (perf arg ...) e ...)
+     #:with (expr ...) (run-art-exprs (syntax->list #'(e ...)) '())
+
+     (realize-art-exprs #'(perf arg ...) (syntax->list #'(expr ...)))]))
+
+(define-for-syntax (realize-art-exprs stx exprs)
+  (syntax-parse stx
+    [(perf:id arg ...)
+     (define real (syntax-local-value #'perf (λ () #f)))
+     (unless real (raise-syntax-error 'realize (format "not a realizer") #'perf))
+    
+     (parameterize ([current-ctxt exprs] [lookup-ctxt exprs])
+       ((realizer/s-body real) (quasisyntax/loc stx (perf arg ...))))]))

@@ -11,4 +11,7 @@
 
 (define-syntax qr (syntax-parser [(_ body ...) (syntax/loc this-syntax (realize (quote-realizer) body ...))]))
 
-(provide dr qr)
+(define-syntax tyr (syntax-parser [(_ body ...) 
+  (syntax/loc this-syntax (displayln (realize (type-string-realizer) body ...)))]))
+
+(provide dr qr tyr)

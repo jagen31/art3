@@ -92,11 +92,14 @@
 (define-for-syntax (do-draw-seq ctxt width height)
   (define max-ix
     (map add1
-         (for/fold ([acc #f])
+         (for/fold ([acc '()])
                    ([expr ctxt])
            (define ix (expr-index expr))
-           (if acc (max-index acc ix) ix))))
-  (when (> (length max-ix) 2) (raise-syntax-error 'draw-seq "cannot draw indexes greater than 2 yet" #f))
+           (cond [(not ix) acc]
+                 [(null? acc) ix]
+                 [else (max-index ix acc)]))))
+  (when (> (length max-ix) 2) 
+    (raise-syntax-error 'draw-seq "cannot draw indexes greater than 2 yet" #f))
 
   (define-values (each-width each-height)
     (cond 

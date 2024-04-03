@@ -3,11 +3,12 @@
 (require art/private/core art/private/draw 
          art/coordinate/instant art/coordinate/index art/coordinate/interval art/coordinate/subset art/coordinate/switch
          2htdp/image
-         (for-syntax syntax/parse racket/list racket/match syntax/id-table syntax/id-set))
+         (for-syntax syntax/parse racket/list racket/set racket/string racket/format racket/match syntax/id-table syntax/id-set))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
 (define-art-object (number [n]))
 (define-art-object (symbol [s]))
+(define-art-object (string [s]))
 
 (define-for-syntax (number-value stx)
   (syntax-parse stx
@@ -30,6 +31,19 @@
       [_ #'empty-image])))
 
 (register-drawer! symbol symbol-drawer)
+
+(define-for-syntax (string-value stx)
+  (syntax-parse stx
+    [(_ val:string) (syntax-e #'val)]))
+
+(define-drawer string-drawer 
+  (λ (e)
+    (syntax-parse e
+      [({~literal string} str:string)
+       #`(overlay (text (~s str) 24 'blue) (rectangle #,(drawer-width) #,(drawer-height) 'solid 'transparent))]
+      [_ #f])))
+
+(register-drawer! string string-drawer)
 
 ;; a classier rewriter that uses "type-clauses" to pattern match against the context and deliver /
 ;; delete the right expressions automatically
@@ -117,6 +131,29 @@
                  ((art-subrealizer/s-body subperf) (current-ctxt)))))
            #`(let () init-statement ... #,(combiner clauses))))]))
 
+#;(define-art-realizer structural-realizer
+  (λ (stx)
+    (syntax-parse stx
+      [(_ ([ctxt-type . the-realizer] ...) expr ...)
+       (define realizer-map 
+         (dict-map 
+           (free-id-table
+             (syntax->datum #'([ctxt-type . the-realizer] ...)))
+           (λ (k v) (values k (syntax-local-value v)))))
+       (for/fold ([acc '()] #:result (reverse acc))
+                 ([e (syntax->list #'(expr ...))])
+         (syntax-parse e
+           [(head:id expr ...)
+            #:when (embed/s? (syntax-local-value #'head (λ () #f)))
+            (unless (dict-has-key? realizer-map #'head) (raise-syntax-error #f "asdf" e))
+            (cons ((art-realizer/s-body (dict-ref realizer-map #'head)) e) acc)]))])))
+
+#;(realize 
+  (structural-realizer 
+    ([namespace .  
+      (namespace-main-realizer 
+       (structural-realizer ([music . (music-rsound-realizer)])))])))
+
 ;;;;;;;;;;;;;;;;;;
 
 ;; delete by name
@@ -183,3 +220,30 @@
        #`(@ () result ...)])))
 
 (define-for-syntax (float-modulo n m) (- n (* (floor (/ n m)) m)))
+
+(define-art-object (art-union-type [expr]))
+(define-art-object (art-focus-type [expr]))
+
+(define-art-rewriter compute-type
+  (λ (stx)
+    (define target
+      (filter 
+        (λ (expr) (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt)))
+        (current-ctxt)))
+    (define tys
+      (for/fold ([acc (immutable-free-id-set)]) 
+                ([e (current-ctxt)])
+        (syntax-parse e
+          ;; FIXME jagen handle reified rewriters
+          [(head:id _ ...) (set-add acc #'head)])))
+    (with-syntax ([(ty* ...) (set->list tys)])
+      (qq-art stx (art-union-type ty* ...)))))
+
+(define-art-realizer type-string-realizer
+  (λ (stx)
+    (define typs (context-ref* (current-ctxt) #'art-union-type))
+    #`#,(string-join
+      (for/list ([typ typs])
+        (syntax-parse typ
+          [({~literal art-union-type} ty ...)
+           (string-join (map (compose ~a syntax-e) (syntax->list #'(ty ...))) " | ")])) "\n")))
