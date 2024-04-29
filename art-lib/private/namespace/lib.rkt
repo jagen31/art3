@@ -37,13 +37,20 @@
       [(_ n:id)
        #:with (result ...)
        (map
-         (λ (x) (remove-from-id-ctxt x #'name))
+         (λ (x) (remove-from-id-ctxt (qq-art r #,x) #'name))
          (filter 
            (λ (e) 
              (and (not (null? (expr-name e)))
                   (context-within? (put-in-ctxt (get-id-ctxt r) #'(name n)) (get-id-ctxt e) (current-ctxt))))
-           (current-ctxt)))
-       (qq-art r (context result ...))])))
+           (lookup-ctxt)))
+       #'(context result ...)])))
+
+(define-art-rewriter ref*
+  (λ (stx)
+    (syntax-parse stx
+      [(_ expr) 
+       #:with (result ...) (rewrite (qq-art stx (context (ref expr) (resolve-ref))))
+      (qq-art stx (context result ...))])))
   
 (define-drawer draw-namespace
   (λ (stx)

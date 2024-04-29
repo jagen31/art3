@@ -6,9 +6,31 @@
          (for-syntax syntax/parse racket/list racket/set racket/string racket/format racket/match syntax/id-table syntax/id-set))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
+
+
+;;;;;;;;;;;; SOME GENERIC OBJECTS that may come in handy.
+
+;;;;;;;;;
+(define-art-object (boolean [b]))
+
+(define-for-syntax (boolean-value stx)
+  (syntax-parse stx
+    [(_ val:boolean) (syntax-e #'val)]))
+
+(define-art-rewriter ->boolean
+  (λ (stx)
+    #`(context #,@(map delete-expr (current-ctxt))
+               #,@(for/list ([expr (current-ctxt)])
+                    (syntax-parse expr
+                      [({~literal number} 0) (qq-art expr (boolean #f))]
+                      [_ (qq-art expr (boolean #t))])))))
+
+;;;;;;;;;;;;
+
+
+
+;;;;;;;;;;
 (define-art-object (number [n]))
-(define-art-object (symbol [s]))
-(define-art-object (string [s]))
 
 (define-for-syntax (number-value stx)
   (syntax-parse stx
@@ -23,14 +45,29 @@
 
 (register-drawer! number number-drawer)
 
+;;;;;;;;;;;;;;;;
+
+
+
+
+;;;;;;;;;;;;;;;;
+(define-art-object (symbol [s]))
+
 (define-drawer symbol-drawer 
   (λ (e)
     (syntax-parse e
       [({~literal symbol} n:id)
        #`(overlay (text (~s 'n) 24 'blue) (rectangle #,(drawer-width) #,(drawer-height) 'solid 'transparent))]
-      [_ #'empty-image])))
+      [_ #f])))
 
 (register-drawer! symbol symbol-drawer)
+
+;;;;;;;;;;;;;;;;;;;;
+
+
+
+;;;;;;;;;;;;;;;;;;;
+(define-art-object (string [s]))
 
 (define-for-syntax (string-value stx)
   (syntax-parse stx
@@ -44,6 +81,10 @@
       [_ #f])))
 
 (register-drawer! string string-drawer)
+
+;;;;;;;;;;;;;;;;;;;;;
+
+
 
 ;; a classier rewriter that uses "type-clauses" to pattern match against the context and deliver /
 ;; delete the right expressions automatically
@@ -91,10 +132,11 @@
             [_
              (qq-art obj (@ () body ...))]))))]))
 
+;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;; SOME GENERIC OBJECTS that may come in handy.
 
 
+;;;;;;;;;;;;;;;;
 (define-art-rewriter &&&
   (λ (stx)
     (syntax-parse stx
@@ -131,28 +173,7 @@
                  ((art-subrealizer/s-body subperf) (current-ctxt)))))
            #`(let () init-statement ... #,(combiner clauses))))]))
 
-#;(define-art-realizer structural-realizer
-  (λ (stx)
-    (syntax-parse stx
-      [(_ ([ctxt-type . the-realizer] ...) expr ...)
-       (define realizer-map 
-         (dict-map 
-           (free-id-table
-             (syntax->datum #'([ctxt-type . the-realizer] ...)))
-           (λ (k v) (values k (syntax-local-value v)))))
-       (for/fold ([acc '()] #:result (reverse acc))
-                 ([e (syntax->list #'(expr ...))])
-         (syntax-parse e
-           [(head:id expr ...)
-            #:when (embed/s? (syntax-local-value #'head (λ () #f)))
-            (unless (dict-has-key? realizer-map #'head) (raise-syntax-error #f "asdf" e))
-            (cons ((art-realizer/s-body (dict-ref realizer-map #'head)) e) acc)]))])))
 
-#;(realize 
-  (structural-realizer 
-    ([namespace .  
-      (namespace-main-realizer 
-       (structural-realizer ([music . (music-rsound-realizer)])))])))
 
 ;;;;;;;;;;;;;;;;;;
 
@@ -186,40 +207,7 @@
            (current-ctxt)))
        #`(@ () #,@(map delete-expr target) #,@(map (λ (e) (remove-from-id-ctxt e #'name)) target))])))
 
-;;;;;;;;; SUBSET 
 
-
-(begin-for-syntax
-  (struct interp/s object/s [parent body]))
-
-(define-syntax (define-interpretation stx)
-  (syntax-parse stx
-    [(_ name)
-     #'(define-syntax name 42)]))
-
-(define-syntax (interpretation+ stx)
-  (syntax-parse stx
-    [(_ name [iname* body* ...] ...)
-     #'(begin
-         (define-syntax iname* (interp/s #'name #'(@ () body* ...))) ...)]))
-
-(define-art-rewriter interpret
-  (λ (stx)
-    (syntax-parse stx
-      [(_ interp*:id)
-       #:with (result ...) 
-         (for/fold ([acc '()] #:result (reverse acc)) 
-                   ([expr (filter (λ (expr) (context-within? (get-id-ctxt expr) (or (get-id-ctxt stx) '()) (current-ctxt))) (current-ctxt))])
-           (syntax-parse expr
-             [(head:id arg ...)
-              #:do [(define interp-struct (syntax-local-value #'head))]
-              #:when (and interp-struct (free-identifier=? (interp/s-parent interp-struct) #'interp*))
-              #:do [(define new-expr (interp/s-body interp-struct))] 
-              (cons (qq-art expr #,new-expr) (cons (delete-expr expr) acc))]
-            [_ acc]))
-       #`(@ () result ...)])))
-
-(define-for-syntax (float-modulo n m) (- n (* (floor (/ n m)) m)))
 
 (define-art-object (art-union-type [expr]))
 (define-art-object (art-focus-type [expr]))
@@ -247,3 +235,13 @@
         (syntax-parse typ
           [({~literal art-union-type} ty ...)
            (string-join (map (compose ~a syntax-e) (syntax->list #'(ty ...))) " | ")])) "\n")))
+
+(define-art-rewriter objects-equal? 
+  (λ (stx)
+    (define expr (syntax->datum (car (current-ctxt))))
+    (if (andmap (λ (x) (equal? (syntax->datum x) expr)) (cdr (current-ctxt)))
+      #'(replace-full-context (boolean #t)) #'(replace-full-context (boolean #f)))))
+
+
+;; randomly useful
+(define-for-syntax (float-modulo n m) (- n (* (floor (/ n m)) m)))

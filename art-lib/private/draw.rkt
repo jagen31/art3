@@ -8,7 +8,7 @@
   (λ (stx) 
     (syntax-parse stx
       [(_ [width:number height:number])
-       #`(above
+       #`(above/align 'left
          #,@(for/list ([e (current-ctxt)]) 
               (parameterize ([drawer-width (syntax-e #'width)] 
                              [drawer-height (syntax-e #'height)]) 
@@ -75,11 +75,10 @@
   (λ (stx)
     (syntax-parse stx
       [(_ colo:id)
-       #`(text #,(program-format (string-trim (syntax->string #`(#,@(current-ctxt))))) 18 '#,(syntax-e #'colo))])))
+       #`(text #,(program-format (string-trim (syntax->string #`(#,@(current-ctxt))))) 24 '#,(syntax-e #'colo))])))
 
 (define-for-syntax (drawer-recur stx)
   (syntax-parse stx
     [(head:id _ ...)
      (define draw (free-id-table-ref recursive-drawers #'head (λ () #f)))
-     (if draw ((drawer/s-body (syntax-local-value draw)) stx) (realize-art-exprs #'(draw-quoted blue) (list stx)))]))
-
+     (if draw (or ((drawer/s-body (syntax-local-value draw)) stx) #'empty-image) (realize-art-exprs #'(draw-quoted blue) (list stx)))]))

@@ -146,6 +146,11 @@
 (define-syntax apl:* (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically * stx a w))))
 (define-syntax apl:>= (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically (λ (a w) (if (>= a w) 1 0)) stx a w))))
 (define-syntax apl:= (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically (λ (a w) (if (= a w) 1 0)) stx a w))))
+(define-syntax apl:datum= (apl-dyad/s (λ (stx a w) 
+  (define l (car (apl-value/s-val a)))
+  (define r (car (apl-value/s-val w)))
+  (apl-value/s 
+    (list (if (equal? (syntax->datum l) (syntax->datum r)) (qq-art l (number 1)) (qq-art l (number 0))))))))
 
 (define-for-syntax (window-list li n)
   (for/list ([i (in-range (- (length li) (sub1 n)))])
@@ -156,6 +161,7 @@
     (λ (stx a w)
       (define a-fun (apl-dyad/s-body a))
       (define w-values (apl-value/s-val w))
+      (println w-values)
       (define max-ix (max-index* (map expr-index w-values)))
 
       (define-values (axis-num window-size)
@@ -201,7 +207,8 @@
                   ([the-ixs- axis])
 
           (define the-ixs (reverse the-ixs-))
-
+(println (map un-@ w-values))
+          (println the-ixs)
           (define result
             (for/fold ([acc (put-in-id-ctxt (context-ref/index w-values (car the-ixs)) #'(index))])
                       ([the-ix (cdr the-ixs)]) 
@@ -449,12 +456,9 @@
     (run-apl
       ((each (monad-dfn (reduce apl:and (ravel (apl:>= (mix (replicate (apl:first (rho ω)) (enclose (lit 12 13 14)))) ω))))) *ctxt*)))
   
-  (define-interpretation testapl)
-  
-  (interpretation+ testapl
-    [sample
-     (ix-- (seq (ix-- (seq (ix-- (number 1) (number 2))) (seq (ix-- (number 3) (number 4)))))
-           (seq (ix-- (seq (ix-- (number 5) (number 6))) (seq (ix-- (number 7) (number 8))))))])
+  (define-art sample
+    (ix-- (seq (ix-- (seq (ix-- (number 1) (number 2))) (seq (ix-- (number 3) (number 4)))))
+          (seq (ix-- (seq (ix-- (number 5) (number 6))) (seq (ix-- (number 7) (number 8)))))))
   
   (realize (quote-realizer)
     (seq
@@ -521,4 +525,3 @@
   (realize (quote-realizer)
     (ix-- (numbers 46 85 75 82) (numbers 208 1412 1257 1410))
     (run-apl (reduce apl:* (reduce (dyad-dfn (reduce apl:+ (apl:>= (apl:* (iota α #:start 1) (apl:- α (iota α #:start 1))) ω))) *ctxt* #:axis 0)))))
-    
