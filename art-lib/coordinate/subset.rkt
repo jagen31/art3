@@ -48,7 +48,9 @@
   (λ(stx)
     (syntax-parse stx
       [(_ [item (... ...)] expr (... ...))
-       (qq-art stx (@ [(subset item (... ...))] expr (... ...)))])))
+       (qq-art stx (@ [(subset item (... ...))] expr (... ...)))]
+      #;[(_ item expr (... ...))
+       (qq-art stx (@-name [item] expr (... ...)))])))
 
 (define-art-rewriter copy-to
   (λ (stx)
