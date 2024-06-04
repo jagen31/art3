@@ -113,7 +113,7 @@
     [(_ name:id body ...)
        #`(begin
            (define-syntax name 
-             (art-var/s (map (λ (e) (remove-from-id-ctxt (ensure-id-ctxt e) #'art-id))
+             (art-var/s (map (λ (e) (ensure-id-ctxt e))
                              (rewrite #'body ...))))
            (begin-for-syntax (set-add! defined-arts #'name)))]))
 
@@ -351,7 +351,7 @@
   (define (run-art-expr expr- ctxt [lk-ctxt '()])
     (define expr (ensure-id-ctxt expr-))
     (syntax-parse expr
-      [({~datum replace-full-context} body ...) (run-art-exprs #'(body ...) '() '())]
+      [({~datum replace-full-context} body ...) (run-art-exprs (syntax->list #'(body ...)) '() '())]
       [({~datum context} inner-expr ...) 
        (run-art-exprs
          (for/list ([b (syntax->list #'(inner-expr ...))])

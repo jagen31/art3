@@ -124,10 +124,12 @@
        (hash-set acc (get-expr-single-index e)
          (syntax-parse e
            [({~literal seq} expr ...)
-            (define sub-result (do-draw-seq (syntax->list #'(expr ...)) (- each-width 20) (- each-height 20)))
+            (define sub-result 
+              (do-draw-seq (syntax->list #'(expr ...)) (- each-width 20) (- each-height 20)))
             ;; draw a box for nested sequences, apl style
             #`(overlay (rectangle #,each-width #,each-height 'outline 'blue) #,sub-result)]
-           [_ (drawer-recur e)]))))
+           [_ (parameterize ([drawer-width each-width] [drawer-height each-height])
+                (drawer-recur e))]))))
 
   (define result2 
     (for/fold ([im #'empty-image])

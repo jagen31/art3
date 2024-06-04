@@ -98,7 +98,7 @@
           [({~literal interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
        ]
        #:with (result ...)
-         (for/list ([i (in-range 0 (- the-end the-start) size)]) #`[#,size expr ...])
+         (for/list ([i (in-range 0 (- (add1 the-end) the-start size) size)]) #`[#,size expr ...])
        (qq-art this-syntax (-- 0 result ...))]
       [_ (error 'expand-loop "oops")])))
 
