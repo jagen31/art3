@@ -27,7 +27,7 @@
     (syntax-parse #`(#,l #,r)
       ;; FIXME ....
       #:datum-literals [start end]
-      [((_ (start s1*:number) (end e1*:number)) (_ (start s2*:number) (end e2*:number)))
+      [((_ [s1*:number e1*:number]) (_ [s2*:number e2*:number]))
 
        (define s1 (syntax-e #'s1*))
        (define s2 (syntax-parse #'s2* [val:number (syntax-e #'val)] [_ #f]))
@@ -40,7 +40,7 @@
 
        #;(unless (or (not e1) (not e*) (< e* e1)) (println "oops") #;(raise-syntax-error 'merger (format "end is outside of parent interval: ~s" e2) e2))
 
-       (qq-art r (interval (start #,s*) (end #,e*)))]
+       (qq-art r (interval [#,s* #,e*]))]
       [_ 
         (println l)
         (println r)
@@ -55,7 +55,7 @@
     (unless l (break #f))
     (syntax-parse #`(#,l #,r)
       #:datum-literals [start end]
-      [((_ (start s1*:number) (end e1*:number)) (_ (start s2*:number) (end e2*:number)))
+      [((_ [s1*:number e1*:number]) (_  [s2*:number e2*:number]))
        (define-values (s1 e1 s2 e2) (values (syntax-e #'s1*) (syntax-e #'e1*) (syntax-e #'s2*) (syntax-e #'e2*)))
        (and (>= s1 s2) (<= e1 e2))])))
 
@@ -66,22 +66,22 @@
 
 (define-for-syntax (interval-syntax->datum stx)
   (syntax-parse stx 
-    [(_ (_ s) (_ e)) (cons (syntax-e #'s) (syntax-e #'e))]
+    [(_ [s e]) (cons (syntax-e #'s) (syntax-e #'e))]
     [_ '(0 . +inf.0)]))
 
 (define-for-syntax (expr-interval stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
-    [(_ (_ s) (_ e)) (cons (syntax-e #'s) (syntax-e #'e))]
+    [(_ [s e]) (cons (syntax-e #'s) (syntax-e #'e))]
     [_ '(0 . +inf.0)]))
 
 (define-for-syntax (expr-start stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
-    [(_ (_ s) _) (syntax-e #'s)]
+    [(_ [s _]) (syntax-e #'s)]
     [_ 0]))
 
 (define-for-syntax (expr-end stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
-    [(_ _ (_ e)) (syntax-e #'e)]
+    [(_ [_ e]) (syntax-e #'e)]
     [_ +inf.0]))
 
 (define-for-syntax (interval-intersect l r)

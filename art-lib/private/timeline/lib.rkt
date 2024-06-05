@@ -67,7 +67,7 @@
   (λ(stx)
     (syntax-parse stx
       [(_ start*:number expr ...) (qq-art stx (i@ [start* +inf.0] expr ...))]
-      [(_ [start* end*] expr ...) (qq-art stx (@ [(interval (start start*) (end end*))] expr ...))])))
+      [(_ [start* end*] expr ...) (qq-art stx (@ [(interval [start* end*])] expr ...))])))
 
 (define-art-rewriter --
   (λ(stx)
@@ -115,7 +115,7 @@
         (define iv (context-ref (get-id-ctxt repeat) #'interval))
         (unless iv (raise-syntax-error 'expand-repeat
           (format "repeat requires a beat interval, got: ~s" (syntax->datum (un-@ repeat))) repeat))
-        (define iv* (car (merge-coordinates (list iv) (list #`(interval (start 0) (end #,size))) (lookup-ctxt))))
+        (define iv* (car (merge-coordinates (list iv) (list #`(interval [0 #,size])) (lookup-ctxt))))
         (define id-ctxt (put-in-ctxt (get-id-ctxt repeat) iv*))
         (define-values (the-start the-end) (syntax-parse iv
           [({~literal interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
@@ -245,7 +245,7 @@
              (define e** (or (round+ensure-whole e*) (raise-syntax-error 'exact-subdivide "score does not subdivide into the given number of divisions." expr)))
              (list (delete-expr expr) 
                    (put-in-id-ctxt (remove-from-id-ctxt expr #'interval) 
-                                   #`(interval (start #,s**) (end #,e**)))))))
+                                   #`(interval [#,s** #,e**]))))))
        #`(context #,(qq-art stx (divisions division*)) #,@exprs)])))
 
 

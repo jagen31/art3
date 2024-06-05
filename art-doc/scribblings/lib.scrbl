@@ -95,7 +95,7 @@ Intervals are coordinates with a start and an end.  Interval @code{within?} is t
 intuitive definition of closed interval containment.  Merging intervals offsets the
 right interval by the start of the left interval. Intervals are used in timelines and music.
 
-@defform[(interval (start number) (end number))]
+@defform[(interval [number number])]
 
 An interval coordinate. 
 
@@ -103,8 +103,8 @@ An interval coordinate.
   #:eval helper-eval
   (realize (draw-realizer [800 100]) 
     (timeline
-      (|@| [(interval (start 2) (end 5))] (symbol hello))
-      (|@| [(interval (start 5) (end 10))] (symbol world))))
+      (|@| [(interval [2 5])] (symbol hello))
+      (|@| [(interval [5 10])] (symbol world))))
 ]
 
 @defform[(i@ [number number] body ...)]
