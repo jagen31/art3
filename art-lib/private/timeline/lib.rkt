@@ -95,7 +95,7 @@
         (unless iv (raise-syntax-error 'expand-loop
           (format "repeat requires a beat interval, got: ~s" (syntax->datum (un-@ repeat))) repeat))
         (define-values (the-start the-end) (syntax-parse iv
-          [({~literal interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
+          [({~literal interval} [s e]) (values (syntax-e #'s) (syntax-e #'e))]))
        ]
        #:with (result ...)
          (for/list ([i (in-range 0 (- (add1 the-end) the-start size) size)]) #`[#,size expr ...])
@@ -296,6 +296,17 @@
           #,(remove-from-id-ctxt (qq-art stx (rhythm r* ...)) #'art-id))])))
 
 
+(define-art-rewriter zoom-interval
+  (λ (stx)
+    (syntax-parse stx
+      [(_ [start end])
+       (qq-art stx (context 
+         #,@(for/list ([expr (current-ctxt)] 
+          #:when (not (context-within? (get-id-ctxt expr) (list #'(interval [start end])) (lookup-ctxt)))) 
+          (delete-expr expr))))])))
+
+
+
 (define-art-rewriter coalesce-seq
   (λ (stx)
     (syntax-parse stx
@@ -309,6 +320,12 @@
                [({~literal seq} expr ...)
                 (map (λ (e) (remove-from-id-ctxt e #'index)) (syntax->list #'(expr ...)))])))
       #`(@ () #,@(map delete-expr sorted) #,(qq-art stx (seq (ix-- result ...))))])))
+
+(define-mapping-rewriter (inline-seq [(: s seq)])
+  (λ (stx s)
+    (syntax-parse s
+      [(_ expr ...)
+       (qq-art s (context expr ...))])))
 
 ;; FIXME jagen WHAT to do with this...
 ;;;;;;; INSTANT/SWITCH
@@ -325,13 +342,11 @@
        (with-syntax ([(target* ...)
          (flatten
            (for/list ([item target])
-             (define current-interval (context-ref (get-id-ctxt item) #'interval))
-             (if current-interval
-              (syntax-parse current-interval
-                [(_ (_ s:number) (_ e:number))
-                  (define new-item (remove-from-id-ctxt item #'interval))
-                  (list (delete-expr item)
-                        (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #t)) #'(instant s))
-                        (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #f)) #'(instant e)))])
-              item)))])
-         #`(@ () target* ...))])))
+             (define iv (expr-interval item))
+             (cond 
+               [iv
+                (define new-item (remove-from-id-ctxt item #'interval))
+                (list (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #t)) #`(instant #,(car iv)))
+                      (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #f)) #`(instant #,(cdr iv))))]
+              [else item])))])
+         #`(context #,@(map delete-expr target) target* ...))])))

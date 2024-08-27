@@ -89,6 +89,18 @@
 
      #`(context #,@(map delete-expr !s) result ...)]))
 
+(define-art-rewriter zoom-index
+  (λ (stx)
+    (syntax-parse stx
+      [(_ [lo hi])
+       (qq-art stx (context 
+         #,@(for/list ([expr (current-ctxt)] 
+          #:when 
+            (let ([ix (expr-index expr)])
+              (or (not (= (length ix) 1)) 
+                  (not (and (>= (car ix) (syntax-e #'lo)) (< (car ix) (syntax-e #' hi)))))))
+          (delete-expr expr))))])))
+
 (define-for-syntax (do-draw-seq ctxt width height)
   (define max-ix
     (map add1

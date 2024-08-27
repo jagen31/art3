@@ -124,13 +124,17 @@
 
 
 ;; realizers- for compiling a rewritten art into racket
-(begin-for-syntax (struct realizer/s [body]))
+(begin-for-syntax (struct realizer/s [body eval?]))
 
 (define-syntax (define-art-realizer stx)
   (syntax-parse stx
     [(_ name:id body)
-     #'(define-syntax name (realizer/s body))]))
+     #'(define-syntax name (realizer/s body #t))]))
 
+(define-syntax (define-art-realizer* stx)
+  (syntax-parse stx
+    [(_ name:id body)
+     #'(define-syntax name (realizer/s body #f))]))
 
 
 
@@ -411,14 +415,17 @@
     [(perf:id arg ...)
      (define real (syntax-local-value #'perf (λ () #f)))
      (unless real (raise-syntax-error 'realize (format "not a realizer") #'perf))
+
+     (define exprs* 
+       (if (realizer/s-eval? real) 
+           (run-art-exprs exprs '())
+           exprs))
  
-     (parameterize ([current-ctxt exprs] [lookup-ctxt exprs])
+     (parameterize ([current-ctxt exprs*] [lookup-ctxt exprs*])
        ((realizer/s-body real) (quasisyntax/loc stx (perf arg ...))))]))
 
 ;; invoke the realizer
 (define-syntax (realize stx)
   (syntax-parse stx
     [(_ (perf arg ...) e ...)
-     #:with (expr ...) (run-art-exprs (syntax->list #'(e ...)) '())
-
-     (realize-art-exprs #'(perf arg ...) (syntax->list #'(expr ...)))]))
+     (realize-art-exprs #'(perf arg ...) (syntax->list #'(e ...)))]))
