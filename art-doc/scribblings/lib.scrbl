@@ -1,7 +1,7 @@
 #lang scribble/doc
 
 @require[(except-in scribble/manual index)
-         scribble-abbrevs/manual (for-label art)]
+         scribble-abbrevs/manual art]
 
 @title{Core Library}
 
@@ -183,7 +183,7 @@ as many times as fits cleanly into the surrounding interval. TODO explain rewrit
 @defform[(rhythm number ...)]
 
 Represents a series of consecutive intervals of the given durations.  A sequence and a rhythm can be converted
-to a concrete series of intervals via @code{apply-rhythm}.  A type that is in context over the entire span 
+to a concrete series of intervals via @code{apply-rhythm}.  A form that is in context over the entire span 
 of the rhythm can be converted to a concrtete series of intervals via @code{rhythm->holes} and @code{fill->holes}.
 
 @defform[(uniform-rhythm number)]
@@ -216,7 +216,7 @@ A rewriter that converts a rhythm to a consecutive series of holes.  Useful in t
 
 Sets are coordinates with a set of identifiers.  Set @code{within?} and @code{merge} can either be
 superset and union, or subset and intersection.  Subset sets are used for voices in music.  Superset
-sets are used for lexical scope.
+sets are used for a model of lexical scope.
 
 @subsection{Indices}
 
