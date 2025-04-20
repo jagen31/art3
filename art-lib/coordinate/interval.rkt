@@ -18,6 +18,8 @@
                     (format-id #'interval "expr-~a" #'interval) (format-id #'interval "~a-intersect" #'interval)
                     (format-id #'interval "context-ref*/~a-intersect" #'interval))
 
+                
+
 ;; part of body of 'define-interval-coordinate'!!!! ^^^^^^
 #'(begin
 (define-for-syntax (do-merge-interval l r)
@@ -57,7 +59,7 @@
       #:datum-literals [start end]
       [((_ [s1*:number e1*:number]) (_  [s2*:number e2*:number]))
        (define-values (s1 e1 s2 e2) (values (syntax-e #'s1*) (syntax-e #'e1*) (syntax-e #'s2*) (syntax-e #'e2*)))
-       (and (>= s1 s2) (<= e1 e2))])))
+       (and (>= s1 s2) (< s1 e2))])))
 
 (define-hom-within?-rule interval
   (λ (l r _ __ ___) (do-interval-within? l r)))
@@ -102,4 +104,19 @@
          (define intersection (interval-intersect (expr-interval expr) coord-interval))
          (if intersection (cons (cons intersection expr) acc) acc)]
         [_ acc])))
-  candidates))])))
+  candidates))]))
+
+;;;;;;;;;;; INSTANT COORDINATE THINGS
+#;(define-hom-merge-rule instant 
+  (λ (l r _ __ ___)
+    (let/ec break
+      (unless l (break r))
+      (unless r (break l))
+      (error 'merge-instant "oops, cannot merge instant for now"))))
+  
+#;(define-hom-within?-rule instant (λ (l r _ __ ___)
+  (syntax-parse #`(#,l #,r)
+    [(({~datum instant} lix) ({~datum instant} rix))
+     (= (syntax-e #'lix) (syntax-e #'rix))])))
+
+#;(define-coordinate (instant [type])))

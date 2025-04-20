@@ -76,16 +76,17 @@
      #:with (result ...)
        (for/list ([e !s])
          (syntax-parse e
-           [({~literal !} value:number)
+           [({~literal !} value:number ...)
             (define items (require-context (lookup-ctxt) e #'seq))
             (syntax-parse items
               [(_ the-items ...) 
-               #:with the-item (or (findf (λ (expr) 
-                 (syntax-parse (or (context-ref (get-id-ctxt expr) #'index) #'(index -1))
-                   [(_ ix*:number) (= (syntax-e #'ix*) (syntax-e #'value))]))
-                 (syntax->list #'(the-items ...)))
-                (raise-syntax-error 'seq-ref (format "No item with given index in sequence: ~s" (un-@ items)) e))
-               (qq-art e (context the-item))])]))
+               #:with (the-items* ...) 
+                 (filter 
+                   (λ (expr) 
+                     (syntax-parse (or (context-ref (get-id-ctxt expr) #'index) #'(index -1))
+                       [(_ ix*:number ...) (equal? (syntax->datum #'(ix* ...)) (syntax->datum #'(value ...)))]))
+                   (syntax->list #'(the-items ...)))
+               (qq-art e (context the-items* ...))])]))
 
      #`(context #,@(map delete-expr !s) result ...)]))
 
@@ -140,9 +141,8 @@
               (do-draw-seq (syntax->list #'(expr ...)) (- each-width 20) (- each-height 20)))
             ;; draw a box for nested sequences, apl style
             #`(overlay (rectangle #,each-width #,each-height 'outline 'blue) #,sub-result)]
-           [_ (parameterize ([drawer-width each-width] [drawer-height each-height])
+           [_ (parameterize ([drawer-width each-width] [drawer-height each-height] [lookup-ctxt ctxt])
                 (drawer-recur e))]))))
-
   (define result2 
     (for/fold ([im #'empty-image])
               ([(ix expr) (in-hash result)])

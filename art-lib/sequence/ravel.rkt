@@ -22,6 +22,16 @@
      (float-scalars (put-in-id-ctxt #'a (context-ref (get-id-ctxt stx) #'index)))]
     [_ stx]))
 
+(define-for-syntax (remove-single-index stxs)
+  (if (= (length stxs) 1)
+    (syntax-parse (car stxs)
+      [stx 
+       #:when (= (expr-single-index #'stx) 0)
+       (list (put-in-id-ctxt (remove-from-id-ctxt #'stx #'index) #'(index)))]
+      [_ stxs])
+    stxs))
+
+
 (define-syntax each
   (apl-monad/s
     (λ (stx f)
@@ -50,6 +60,20 @@
             [_ (list expr)])))
       (define result2 (flatten result))
       (apl-value/s result2))))
+
+(define-syntax split
+  (apl-monad/s
+    (λ (stx w)
+      (define result
+        (for/fold ([mapping (hash)]) 
+                  ([expr (apl-value/s-val w)])
+          (define indices (expr-index expr))
+          (hash-update mapping (car indices) 
+            (λ (s) (cons (put-in-id-ctxt (remove-from-id-ctxt expr #'index) #`(index #,@(cdr indices))) s)) '())))
+      (define result*
+        (for/list ([(k v) (in-hash result)])
+          (put-in-id-ctxt (ensure-id-ctxt #`(seq #,@v)) #`(index #,k))))
+      (apl-value/s result*))))
   
 (define-for-syntax (scalar-extend-left a w)
   (define aix (max-index* (map expr-index a)))
@@ -61,7 +85,7 @@
      (for/list ([ix (get-index-range wix)]) (put-in-id-ctxt a* #`(index #,@ix)))]
     [else a]))
 
-(define-syntax rho
+#;(define-syntax rho
   (apl-monad/s
     (λ (stx w)
       
@@ -96,47 +120,76 @@
       (unless (= (length w-values) 1) (raise-syntax-error 'iota (format "expected scalar on right of iota, got ~s" (map un-@ w-values))))
       (define nums (for/list ([i (in-range start (+ start (number-value (car w-values))))]) #`(number #,i)))
       (define result (rewrite (qq-art stx (ix-- #,@nums))))
+      (apl-value/s (remove-single-index result)))))
+
+(define-syntax grade-up
+  (apl-monad/s
+    (λ (stx w)
+      (define w-values (apl-value/s-val w))
+      (define sorted (sort w-values < #:key number-value))
+      (define result
+        (for/list ([expr sorted] [i (in-naturals)])
+          (put-in-id-ctxt (ensure-id-ctxt #`(number #,(expr-single-index expr))) #`(index #,i))))
       (apl-value/s result))))
 
 (define-for-syntax (apl-apply-function-dyadically f stx a w)
 
-      (define a-values- (apl-value/s-val a))
-      (define w-values- (apl-value/s-val w))
-      (define a-values (scalar-extend-left a-values- w-values-))
-      (define w-values (scalar-extend-left w-values- a-values-))
-      (define aix (max-index* (map expr-index a-values)))
-      (define wix (max-index* (map expr-index w-values)))
-      ;; FIXME jagen figure out how APL does these operators
-      (unless (equal? aix wix) (raise-syntax-error 'apl:max "cant do unequal indexes yet" stx))
+  (define a-values- (apl-value/s-val a))
+  (define w-values- (apl-value/s-val w))
+  (define a-values (scalar-extend-left a-values- w-values-))
+  (define w-values (scalar-extend-left w-values- a-values-))
+  (define aix (max-index* (map expr-index a-values)))
+  (define wix (max-index* (map expr-index w-values)))
+  ;; FIXME jagen figure out how APL does these operators
+  (unless (equal? aix wix) (raise-syntax-error 'apply-function "cant do unequal indexes yet" stx))
 
-      (define (do-op l r ix)
-        (syntax-parse #`(#,l #,r)
-          [(({~literal number} l:number) ({~literal number} r:number))
-           (qq-art stx (ix@ #,ix (number #,(f (syntax-e #'l) (syntax-e #'r)))))]
-          [(({~literal number} l:number) ({~literal seq} expr ...))
-           #:do [(define l* (syntax-e #'l))]
-           #:with (expr* ...) 
-             (for/list ([e (syntax->list #'(expr ...))])
-               (qq-art e (number #,(f l* (number-value e)))))
-           (qq-art stx (ix@ #,ix (seq expr* ...)))]
-          [(({~literal seq} expr ...) ({~literal number} r:number))
-           #:do [(define r* (syntax-e #'r))]
-           #:with (expr* ...) 
-             (for/list ([e (syntax->list #'(expr ...))])
-               (qq-art e (number #,(f r* (number-value e)))))
-           (qq-art stx (ix@ #,ix (seq expr* ...)))]
-          [(({~literal seq} exprl ...) ({~literal seq} exprr ...))
-           #:with (expr* ...) 
-             (for/list ([l (syntax->list #'(exprl ...))] [r (syntax->list #'(exprr ...))])
-               (qq-art l (number #,(f (number-value l) (number-value r)))))
-           (qq-art stx (ix@ #,ix (seq expr* ...)))]))
+  (define (do-op l r ix)
+    (syntax-parse #`(#,l #,r)
+      [(({~literal number} l:number) ({~literal number} r:number))
+       (qq-art stx (ix@ #,ix (number #,(f (syntax-e #'l) (syntax-e #'r)))))]
+      [(({~literal number} l:number) ({~literal seq} expr ...))
+       #:do [(define l* (syntax-e #'l))]
+       #:with (expr* ...) 
+         (for/list ([e (syntax->list #'(expr ...))])
+           (qq-art e (number #,(f l* (number-value e)))))
+       (qq-art stx (ix@ #,ix (seq expr* ...)))]
+      [(({~literal seq} expr ...) ({~literal number} r:number))
+       #:do [(define r* (syntax-e #'r))]
+       #:with (expr* ...) 
+         (for/list ([e (syntax->list #'(expr ...))])
+           (qq-art e (number #,(f r* (number-value e)))))
+       (qq-art stx (ix@ #,ix (seq expr* ...)))]
+      [(({~literal seq} exprl ...) ({~literal seq} exprr ...))
+       #:with (expr* ...) 
+         (for/list ([l (syntax->list #'(exprl ...))] [r (syntax->list #'(exprr ...))])
+           (qq-art l (number #,(f (number-value l) (number-value r)))))
+       (qq-art stx (ix@ #,ix (seq expr* ...)))]))
 
 
-      (define maxs 
-        (for/list ([ix (get-index-range aix)]) (do-op (context-ref/index a-values ix) (context-ref/index w-values ix) ix)))
+  (define max-range (get-index-range aix))
 
-      (define result (run-art-exprs maxs '() (lookup-ctxt)))
-      (apl-value/s result))
+  ;; This would be very slow without an index
+  (define a-mapping
+    (for/hash ([a a-values])
+      (values (expr-index a) a)))
+  (define w-mapping
+    (for/hash ([w w-values])
+      (values (expr-index w) w)))
+
+  (define maxs 
+    (for/list ([ix max-range]) 
+      (do-op (context-ref/index a-values ix) (context-ref/index w-values ix) ix)))
+
+  (define result (run-art-exprs maxs '() (lookup-ctxt)))
+  (apl-value/s result))
+
+(define-for-syntax (apl-apply-function-monadically f stx w)
+  (define w-values (apl-value/s-val w))
+  (define result 
+    (for/list ([val w-values])
+      (syntax-parse val
+        [(number n:number) (qq-art val (number #,(f (syntax-e #'n))))])))
+  (apl-value/s result))
 
 (define-syntax apl:max (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically max stx a w))))
 (define-syntax apl:min (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically min stx a w))))
@@ -144,8 +197,12 @@
 (define-syntax apl:+ (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically + stx a w))))
 (define-syntax apl:- (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically - stx a w))))
 (define-syntax apl:* (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically * stx a w))))
+(define-syntax apl:/ (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically / stx a w))))
 (define-syntax apl:>= (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically (λ (a w) (if (>= a w) 1 0)) stx a w))))
+(define-syntax apl:<= (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically (λ (a w) (if (<= a w) 1 0)) stx a w))))
 (define-syntax apl:= (apl-dyad/s (λ (stx a w) (apl-apply-function-dyadically (λ (a w) (if (= a w) 1 0)) stx a w))))
+(define-syntax apl:not (apl-monad/s (λ (stx w) (apl-apply-function-monadically (λ (w) (if (= w 0) 1 0)) stx w))))
+(define-syntax magnitude (apl-monad/s (λ (stx w) (apl-apply-function-monadically abs stx w))))
 (define-syntax apl:datum= (apl-dyad/s (λ (stx a w) 
   (define l (car (apl-value/s-val a)))
   (define r (car (apl-value/s-val w)))
@@ -161,7 +218,6 @@
     (λ (stx a w)
       (define a-fun (apl-dyad/s-body a))
       (define w-values (apl-value/s-val w))
-      (println w-values)
       (define max-ix (max-index* (map expr-index w-values)))
 
       (define-values (axis-num window-size)
@@ -207,8 +263,6 @@
                   ([the-ixs- axis])
 
           (define the-ixs (reverse the-ixs-))
-(println (map un-@ w-values))
-          (println the-ixs)
           (define result
             (for/fold ([acc (put-in-id-ctxt (context-ref/index w-values (car the-ixs)) #'(index))])
                       ([the-ix (cdr the-ixs)]) 
@@ -271,6 +325,36 @@
           (put-in-id-ctxt expr #`(index #,i))))
       (apl-value/s result))))
 
+(define-syntax without
+  (apl-dyad/s
+    (λ (stx a w)
+      (define a-values (apl-value/s-val a))
+      (define w-values (apl-value/s-val w))
+      (define result 
+        (for/fold ([acc a-values])
+                  ([val w-values])
+          (filter (λ (x) (not (= (number-value val) (number-value x)))) acc)))
+      (define shift (- (length a-values) (length result))) 
+      (apl-value/s 
+        (for/list ([r result]) 
+          (put-in-id-ctxt (remove-from-id-ctxt r #'index) 
+                          #`(index #,(- (expr-single-index r) shift))))))))
+
+(define-syntax apl:index
+  (apl-dyad/s
+    (λ (stx a w)
+      (define a-values (apl-value/s-val a))
+      (define w-values (apl-value/s-val w))
+      (define max-ix (max-index* (map expr-index a-values)))
+      
+      (define result
+        (for/list ([w-val w-values] [i (in-naturals)])
+          (put-in-id-ctxt 
+            (context-ref/index a-values (list (number-value w-val)))
+            #`(index #,i))))
+
+      (apl-value/s (remove-single-index result)))))
+
 (define-syntax apl:compose
   (apl-dyad/s
     (λ (stx a w)
@@ -309,21 +393,14 @@
           result-))
       (apl-value/s result))))
 
-;;;; NUMBE 
-
-(define-for-syntax (do-negate exprs)
-  (for/list ([val exprs])
-    (qq-art val 
-      #,(syntax-parse val
-        [({~literal seq} expr ...) 
-         (do-negate (syntax->list #'(expr ...)))]
-        [({~literal number} val:number)
-         #`(number #,(- (syntax-e #'val)))]))))
-
-(define-syntax negate
+(define-syntax rho
   (apl-monad/s 
-    (λ (stx w) 
-      (define result (do-negate (apl-value/s-val w)))
+    (λ (stx w)
+      (define w-values (apl-value/s-val w))
+      (define max-ix (max-index* (map expr-index w-values))) 
+      (define result
+        (for/list ([n max-ix] [ix (in-naturals)])
+          (put-in-id-ctxt (ensure-id-ctxt #`(number #,n)) #`(index #,ix))))
       (apl-value/s result))))
 
 (define-syntax apl:reverse
@@ -335,6 +412,17 @@
         (if (null? max-ix)
           w-values
           (reverse (map (λ (e) (put-in-id-ctxt e #`(index #,(- (car max-ix) (expr-single-index e) 1)))) w-values))))
+      (apl-value/s result))))
+
+(define-syntax transpose
+  (apl-monad/s
+    (λ (stx w)
+      (define w-values (apl-value/s-val w))
+      (define result
+        (for/list ([expr w-values])
+          (define ix (expr-index expr))
+          ;; TODO jagen31 this is probably not the way LOL
+          (put-in-id-ctxt (remove-from-id-ctxt expr #'index) #`(index #,@(reverse ix)))))
       (apl-value/s result))))
 
 (define-for-syntax (eval-apl-expr expr ctxt)
@@ -524,4 +612,41 @@
   (println "small money")
   (realize (quote-realizer)
     (ix-- (numbers 46 85 75 82) (numbers 208 1412 1257 1410))
-    (run-apl (reduce apl:* (reduce (dyad-dfn (reduce apl:+ (apl:>= (apl:* (iota α #:start 1) (apl:- α (iota α #:start 1))) ω))) *ctxt* #:axis 0)))))
+    (run-apl (reduce apl:* (reduce (dyad-dfn (reduce apl:+ (apl:>= (apl:* (iota α #:start 1) (apl:- α (iota α #:start 1))) ω))) *ctxt* #:axis 0))))
+    
+
+  (println "sort")
+  (realize (quote-realizer)
+    (run-apl ((monad-dfn (apl:index ω (grade-up ω))) (lit 57 42 101))))
+
+  (println "transpose")
+  (realize (quote-realizer)
+    (ix-- (numbers 1 2 3) (numbers 4 5 6))
+    (run-apl (transpose *ctxt*)))
+
+(println "split")
+(realize (quote-realizer)
+  (ix-- (numbers 1 2 3) (numbers 4 5 6))
+  (run-apl (split *ctxt*)))
+
+
+(println "mo money")
+(realize (quote-realizer)
+  (ix-- (numbers 3 4) (numbers 4 3) (numbers 2 5) (numbers 1 3) (numbers 3 9) (numbers 3 3))
+  (run-apl (reduce apl:+ 
+    (magnitude 
+      (reduce apl:- 
+        (transpose 
+          (mix ((each (monad-dfn (apl:index ω (grade-up ω)))) 
+                (split (transpose *ctxt*))))))))))
+
+(println "without")
+#;(realize (quote-realizer)
+  (numbers 1 2 3 4 5 6)
+  (run-apl (without *ctxt* (lit 1 2 3))))
+
+(println "rho")
+(realize (quote-realizer)
+  (numbers 1 2 3 4)
+  (run-apl (rho *ctxt*)))
+    )

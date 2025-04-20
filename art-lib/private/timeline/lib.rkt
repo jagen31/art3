@@ -7,6 +7,13 @@
 
 (define-interval-coordinate interval)
 
+
+(define-nonhom-merge-rule instant interval #:keep-right
+  (λ (l r _ __ ctxt)
+    (syntax-parse #`(#,l #,r)
+      [((instant n) (interval [start end]))
+       (qq-art r (interval [#,(+ (syntax-e #'start) (syntax-e #'n)) #,(+ (syntax-e #'end) (syntax-e #'n))]))])))
+
 ;;;;;;; time context.
 (define-art-embedding (timeline [items])
   (λ (stx ctxt)
@@ -52,7 +59,7 @@
            (define x-end (* end* each-width))
            (define width* (- x-end x-start))
 
-           (define sub-pic (parameterize ([drawer-width width*]) (drawer-recur e)))
+           (define sub-pic (parameterize ([drawer-width width*] [lookup-ctxt ctxt]) (drawer-recur e)))
 
            #`(overlay/xy
                (add-line (add-line (add-line #,sub-pic 0 10 #,width* 10 'purple) 0 0 0 20 'purple)

@@ -34,16 +34,23 @@
 (define-mapping-rewriter (resolve-ref [(: r ref)])
   (λ (stx r)
     (syntax-parse r
-      [(_ n:id)
-       #:with (result ...)
-       (map
-         (λ (x) (remove-from-id-ctxt (qq-art r #,x) #'name))
-         (filter 
-           (λ (e) 
-             (and (not (null? (expr-name e)))
-                  (context-within? (put-in-ctxt (get-id-ctxt r) #'(name n)) (get-id-ctxt e) (current-ctxt))))
-           (lookup-ctxt)))
-       #'(context result ...)])))
+      [(_ n:id ...)
+       (define items (require-context (lookup-ctxt) r #'namespace))
+       (syntax-parse items
+         [(_ the-items ...)
+          #:with (result ...)
+          (map
+            (λ (x) (remove-from-id-ctxt x #'name))
+            (filter 
+              (λ (e) 
+                (println (map syntax->datum (expr-name e)))
+                (println (syntax->datum #'(n ...)))
+                (and (not (null? (expr-name e)))
+                     (equal? (syntax->datum #'(n ...)) (map syntax->datum (expr-name e)))))
+              (syntax->list #'(the-items ...))))
+          (unless (not (null? (syntax->list #'(result ...))))
+            (raise-syntax-error 'resolve-ref "ref had no value" r))
+          #'(context result ...)])])))
 
 (define-art-rewriter ref*
   (λ (stx)

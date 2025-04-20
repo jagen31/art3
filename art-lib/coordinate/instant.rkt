@@ -17,3 +17,8 @@
      (= (syntax-e #'lix) (syntax-e #'rix))])))
 
 (define-coordinate (instant [type]))
+
+(define-for-syntax (expr-instant stx)
+  (syntax-parse (context-ref (get-id-ctxt stx) #'instant)
+    [(_ t) (syntax-e #'t)]
+    [_ #f]))

@@ -178,8 +178,8 @@
       [(head:id inner-expr ...)
        #:do [(define maybe-embed (syntax-local-value #'head (λ () #f)))]
        #:when (embed/s? maybe-embed)
-       (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] (head #,@(map un-@ (syntax->list #'(inner-expr ...))))))]
-      [_ (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] #,expr))])))
+       (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] (head #,@(map (compose un-@ ensure-id-ctxt) (syntax->list #'(inner-expr ...))))))]
+      [_ (quasisyntax/loc expr (@ [#,@(get-id-ctxt expr)] #,(set-id-ctxt expr '())))])))
  
 
 ;; define a merge rule for one coord

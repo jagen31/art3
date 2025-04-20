@@ -245,3 +245,10 @@
 
 ;; randomly useful
 (define-for-syntax (float-modulo n m) (- n (* (floor (/ n m)) m)))
+
+(define-art-rewriter zoom
+  (λ (stx)
+    (qq-art stx (context 
+      #,@(for/list ([expr (current-ctxt)] 
+        #:when (not (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (lookup-ctxt)))) 
+        (delete-expr expr))))))

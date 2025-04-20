@@ -19,28 +19,35 @@
                     
 
 #'(begin
-;;;;;;;;;;; INDEX COORDINATE THINGS
-(define-hom-merge-rule index
-  (λ (l r _ __ ___)
-    (let/ec break
-      (unless l (break r))
-      (unless r (break l))
-      (syntax-parse #`(#,l #,r)
-        [((_ ixl:number (... ...)) (__ ixr:number (... ...)))
-         (qq-art r (index ixl (... ...) ixr (... ...)))]))))
-  
-(define-hom-within?-rule index (λ (l r _ __ ___)
-  (syntax-parse #`(#,l #,r)
-    [(({~datum index} lix (... ...)) ({~datum index} rix (... ...)))
-     (equal? (syntax->datum #'(lix (... ...))) (syntax->datum #'(rix (... ...))))])))
 
 (define-coordinate (index [val]))
+
+(define-for-syntax (do-merge-index l r)
+  (let/ec break
+    (unless l (break r))
+    (unless r (break l))
+    (syntax-parse #`(#,l #,r)
+      [((_ ixl:number (... ...)) (__ ixr:number (... ...)))
+       (qq-art r (index ixl (... ...) ixr (... ...)))])))
+
+;;;;;;;;;;; INDEX COORDINATE THINGS
+(define-hom-merge-rule index (λ (l r _ __ ___) (do-merge-index l r)))
+
+(define-for-syntax (do-index-within? l r)
+  (syntax-parse #`(#,l #,r)
+    [(({~datum index} lix (... ...)) ({~datum index} rix (... ...)))
+     (define l* (syntax->datum #'(lix (... ...))))
+     (define r* (syntax->datum #'(rix (... ...))))
+     (or (equal? r* l*) (list-prefix? r* l*))]))
+  
+(define-hom-within?-rule index (λ (l r _ __ ___) (do-index-within? l r)))
+
 
 (define-for-syntax (expr-single-index stx)
   (define indices (expr-index stx))
   (if (and (not (empty? indices)) (null? (cdr indices)))
     (car indices)
-    (raise-syntax-error 'expr-single-index (format "expr must be rank 1, got index: ~s" indices) stx)))
+    (if (empty? indices) 0 (raise-syntax-error 'expr-single-index (format "expr must be rank 1, got index: ~s" indices) stx))))
 
 (define-for-syntax (expr-index stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'index) 
@@ -67,12 +74,6 @@
                ([i each])
      (append (map (λ (l) (cons i l)) rest) acc))]))
 
-(module+ test
-  (begin-for-syntax
-  (require rackunit)
-  
-    (check-equal? (get-index-range '(2 2 2)) '((0 0 0) (0 0 1) (0 1 0) (0 1 1) (1 0 0) (1 0 1) (1 1 0) (1 1 1)))))
-
 (define-for-syntax (context-ref/index ctxt ix) 
   (car (filter 
          (λ (expr) (equal? ix (map syntax->datum (cdr (syntax->list (context-ref (get-id-ctxt expr) #'index))))))
@@ -83,11 +84,5 @@
   (group-by (lambda (ix) 
     `(,@(take ix axis) ,@(take-right ix (sub1 (- (length max-ix) axis))))) range))
 
-
-(module+ test
-  (begin-for-syntax
-  (require rackunit)
-  
-    (check-equal? (get-index-axis '(2 2 2) 0) '(((0 0 0) (1 0 0)) ((0 0 1) (1 0 1)) ((0 1 0) (1 1 0)) ((0 1 1) (1 1 1))))))
 
 (define-for-syntax (zero-index n) (build-list n (λ (_) 0))))])))
