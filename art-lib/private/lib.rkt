@@ -1,8 +1,8 @@
 #lang racket
 
-(require art/private/core art/private/draw 
+(require art/private/core art/private/draw
          art/coordinate/instant art/coordinate/index art/coordinate/interval art/coordinate/subset art/coordinate/switch
-         2htdp/image
+         2htdp/image (prefix-in 2htdp: 2htdp/image)
          (for-syntax syntax/parse racket/list racket/set racket/string racket/format racket/match syntax/id-table syntax/id-set))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
@@ -187,8 +187,9 @@
          (filter 
            (λ (expr) 
              (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt))
-                  (syntax-parse expr
-                    [(head:id _ ...) (free-id-set-member? names #'head)])))
+                  (or (set-empty? names)
+                    (syntax-parse expr
+                      [(head:id _ ...) (free-id-set-member? names #'head)]))))
            (current-ctxt)))
        (with-syntax ([(target* ...)
          (for/list ([item target])
@@ -252,3 +253,23 @@
       #,@(for/list ([expr (current-ctxt)] 
         #:when (not (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (lookup-ctxt)))) 
         (delete-expr expr))))))
+
+(define-art-rewriter apply-coordinates
+  (λ (stx)
+    (define-values (result deletes)
+    (for/fold ([acc (current-ctxt)] [exprs '()]) 
+                     ([outer-expr (current-ctxt)] #:when (coordinate/s?
+                 (syntax-local-value (car (syntax->list outer-expr)) (λ () #f))))
+      
+             (define new-ctxt
+               (flatten
+               (for/list ([inner-expr acc]) 
+                 (if (context-within? (get-id-ctxt inner-expr) (get-id-ctxt outer-expr) (lookup-ctxt))
+                     ;; TODO jagen31 this should be a merge into id ctxt
+                     (list (delete-expr inner-expr) (put-in-id-ctxt inner-expr outer-expr))
+                     inner-expr))))
+
+             (values new-ctxt (cons outer-expr exprs))))
+    #`(replace-full-context
+        #,@result
+        #,@(map delete-expr deletes))))

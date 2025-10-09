@@ -173,6 +173,7 @@
   
   (define (un-@ expr) 
     (syntax-parse expr
+      [expr #:when (not (get-id-ctxt #'expr)) #'expr]
       [({~datum @} coord inner-expr ...)
        (quasisyntax/loc expr (@ coord #,@(map un-@ (syntax->list #'(inner-expr ...)))))]
       [(head:id inner-expr ...)

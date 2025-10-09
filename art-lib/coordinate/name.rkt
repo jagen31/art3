@@ -8,7 +8,7 @@
 (define-syntax define-name-coordinate
   (λ (stx)
     (syntax-parse stx
-      [(_ name:id)
+      [(_ name)
        #:with [do-merge-name do-name-within? expr-single-name expr-name context-ref/name]
               (list (format-id #'name "do-merge-~a" #'name) (format-id #'name"do-~a-within?" #'name) 
                     (format-id #'name "expr-single-~a" #'name) (format-id #'name "expr-~a" #'name)
@@ -35,11 +35,16 @@
 
 (define-for-syntax (expr-single-name stx)
   (define names (expr-name stx))
-  (format-id #f (string-join (map (compose symbol->string syntax->datum) names) ".")))
+  (define (convert s)
+    (if (number? s)
+        (number->string s)
+        (symbol->string s)))
+  (and (cons? names) 
+       (format-id #f (string-join (map (compose convert syntax->datum) names) "."))))
 
 (define-for-syntax (expr-name stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'name) 
-    [(_ n:id (... ...)) (syntax->list #'(n (... ...)))]
+    [(_ n (... ...)) (syntax->list #'(n (... ...)))]
     [_ '()]))
 
 (define-for-syntax (context-ref/name ctxt name) 

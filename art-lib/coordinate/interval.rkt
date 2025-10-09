@@ -71,10 +71,10 @@
     [(_ [s e]) (cons (syntax-e #'s) (syntax-e #'e))]
     [_ '(0 . +inf.0)]))
 
-(define-for-syntax (expr-interval stx)
+(define-for-syntax (expr-interval stx [default '(0 . +inf.0)])
   (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 
     [(_ [s e]) (cons (syntax-e #'s) (syntax-e #'e))]
-    [_ '(0 . +inf.0)]))
+    [_ default]))
 
 (define-for-syntax (expr-start stx)
   (syntax-parse (context-ref (get-id-ctxt stx) #'interval) 

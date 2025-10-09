@@ -1,7 +1,7 @@
 #lang racket
 
 (require art/private/core (for-syntax syntax/parse racket/list))
-(provide (all-defined-out))
+(provide (all-defined-out) (for-syntax (all-defined-out)))
 
 ;;;;;;;;;;; INSTANT COORDINATE THINGS
 (define-hom-merge-rule instant 

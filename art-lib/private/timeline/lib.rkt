@@ -1,7 +1,7 @@
 #lang racket
 
-(require art/base art/coordinate/interval art/coordinate/instant art/coordinate/switch 
-         art/private/lib art/sequence 2htdp/image 
+(require art/base art/coordinate/interval art/coordinate/instant art/coordinate/switch  art/coordinate/name
+         art/private/lib art/sequence 2htdp/image  art/namespace
          (for-syntax racket/format syntax/parse racket/list racket/math racket/match))
 (provide (all-defined-out) (for-syntax (all-defined-out)))
 
@@ -13,6 +13,11 @@
     (syntax-parse #`(#,l #,r)
       [((instant n) (interval [start end]))
        (qq-art r (interval [#,(+ (syntax-e #'start) (syntax-e #'n)) #,(+ (syntax-e #'end) (syntax-e #'n))]))])))
+(define-nonhom-merge-rule interval instant #:keep-right
+  (λ (l r _ __ ctxt)
+    (syntax-parse #`(#,l #,r)
+      [((interval [start end]) (instant n))
+       (qq-art r (instant #,(+ (syntax-e #'start) (syntax-e #'n))))])))
 
 ;;;;;;; time context.
 (define-art-embedding (timeline [items])
@@ -144,13 +149,22 @@
     [(_ value-:number) 
      (define exprs (filter (λ (x) (context-within? (get-id-ctxt x) (get-id-ctxt this-syntax) (lookup-ctxt))) (current-ctxt)))
      (define result (for/list ([e exprs])
-       (define start (expr-interval-start e))
-       (define my-start (or (expr-interval-start this-syntax) 0))
-       (define value (syntax-e #'value-))
-       (if start
-         #`(i@ [#,(+ my-start (* (- start my-start) value)) #,(+ my-start (* value (- (expr-interval-end e) my-start)))]
-             #,(remove-from-id-ctxt e #'interval))
-         e)))
+       (cond
+         [(expr-instant e) 
+          (define start (expr-instant e))
+          (define my-start (or (expr-interval-start this-syntax) 0))
+          (define value (syntax-e #'value-))
+          #`(@ [(instant #,(+ my-start (* (- start my-start) value)))]
+                #,(remove-from-id-ctxt e #'instant))]
+         [(expr-interval e #f)
+          (define start (expr-interval-start e))
+          (define my-start (or (expr-interval-start this-syntax) 0))
+          (define value (syntax-e #'value-))
+          (if start
+            #`(i@ [#,(+ my-start (* (- start my-start) value)) #,(+ my-start (* value (- (expr-interval-end e) my-start)))]
+                #,(remove-from-id-ctxt e #'interval))
+            e)]
+         [else e])))
      #`(replace-full-context #,@result)]))
 
 
@@ -217,6 +231,21 @@
                    ([h holes])
            (define items* (context-ref*/surrounding items (get-id-ctxt h) #'head))
            (append (map (λ (e) (qq-art h #,(remove-from-id-ctxt e #'interval))) items*) acc))
+       #`(context #,@(map delete-expr items) #,@(map delete-expr holes) result ...)])))
+
+;; fill holes but also just get everything dont restrict to being around the hole
+(define-art-rewriter fill-holes*
+  (λ (stx)
+    (syntax-parse stx
+      [(_ head:id)
+       #:do [
+       (define-values (holes items)
+         (values (context-ref*/within (current-ctxt) (get-id-ctxt stx) #'hole)
+                 (context-ref*/within (lookup-ctxt) (get-id-ctxt stx) #'head)))]
+       #:with (result ...)
+         (for/fold ([acc '()] #:result (reverse acc))
+                   ([h holes])
+           (append (map (λ (e) (qq-art h (context #,e))) items) acc))
        #`(context #,@(map delete-expr items) #,@(map delete-expr holes) result ...)])))
 
 (define-mapping-rewriter (rhythm->holes [(: r rhythm)])
@@ -344,16 +373,66 @@
        (define target
          (filter 
            (λ (expr)
-             (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt))))
+             (and (context-within? (get-id-ctxt expr) (get-id-ctxt stx) (current-ctxt)) (expr-interval expr #f)))
            (current-ctxt)))
        (with-syntax ([(target* ...)
          (flatten
            (for/list ([item target])
              (define iv (expr-interval item))
-             (cond 
-               [iv
-                (define new-item (remove-from-id-ctxt item #'interval))
-                (list (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #t)) #`(instant #,(car iv)))
-                      (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #f)) #`(instant #,(cdr iv))))]
-              [else item])))])
+             (define new-item (remove-from-id-ctxt item #'interval))
+             (list (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #t)) #`(instant #,(car iv)))
+                   (put-in-id-ctxt (put-in-id-ctxt new-item #'(switch #f)) #`(instant #,(cdr iv))))))])
          #`(context #,@(map delete-expr target) target* ...))])))
+
+
+(define-art-object (set [expr]))
+(define-art-object (reset [expr]))
+
+(begin-for-syntax
+  (define (nearest-reset s resets)
+    (for/fold ([acc #f]) 
+              ([r (sort resets < #:key expr-instant)]) #:final (< s (expr-instant r))
+        (expr-instant r))))
+
+(define-art-rewriter do-set
+  (lambda (stx)
+    (define sets (context-ref*/within (current-ctxt) (get-id-ctxt stx) #'set))
+    (define resets (context-ref*/within (current-ctxt) (get-id-ctxt stx) #'reset))
+
+    #`(context 
+      #,@(map delete-expr sets)
+      #,@(for/list ([s sets])
+        (define start (expr-instant s))
+        (define end (or (nearest-reset start (filter 
+          (λ (x) (context-within? (get-id-ctxt (remove-from-id-ctxt s #'instant)) (get-id-ctxt (remove-from-id-ctxt x #'instant)) (lookup-ctxt))) resets)) (expr-interval-end stx)))
+        (define/syntax-parse (_ s2) s)
+        (qq-art (remove-from-id-ctxt s #'instant) (i@ [#,start #,end] s2))))))
+
+
+(define-art-rewriter split-on-reset
+  (lambda (stx)
+    (define resets (context-ref* (filter (λ (x) (context-within? 
+        (get-id-ctxt (remove-from-id-ctxt (remove-from-id-ctxt stx #'interval) #'name))
+        (get-id-ctxt (remove-from-id-ctxt (remove-from-id-ctxt x #'interval) #'name)) (lookup-ctxt))) 
+      (current-ctxt)) #'reset))
+    (println "RESERYS")
+    (println resets)
+    (println (map un-@ (context-ref* (current-ctxt) #'reset)))
+    (define beats (sort (cons +inf.0 (map expr-interval-start resets)) <))
+    (println beats)
+    #`(context
+        #,@(for/fold ([acc '()] #:result (reverse acc))
+                     ([reset-start beats] [reset-end (cdr beats)])
+          (cons #`(i@ [#,reset-start #,reset-end] (translate #,(- reset-start))) acc)))))
+
+(define-art-rewriter instant->interval
+  (λ (stx)
+       (define exprs (filter (λ (x) (context-within? (get-id-ctxt x) (get-id-ctxt stx) (lookup-ctxt)))   
+                                   (current-ctxt)))
+       (define/syntax-parse (result ...)
+         (for/list ([e exprs])
+           (define inst (expr-instant e))
+           (if inst
+            (put-in-id-ctxt (remove-from-id-ctxt e #'instant) #`(interval [#,inst #,inst]))
+            e)))
+       #`(context #,@(map delete-expr exprs) result ...)))
