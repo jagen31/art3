@@ -415,11 +415,7 @@
         (get-id-ctxt (remove-from-id-ctxt (remove-from-id-ctxt stx #'interval) #'name))
         (get-id-ctxt (remove-from-id-ctxt (remove-from-id-ctxt x #'interval) #'name)) (lookup-ctxt))) 
       (current-ctxt)) #'reset))
-    (println "RESERYS")
-    (println resets)
-    (println (map un-@ (context-ref* (current-ctxt) #'reset)))
     (define beats (sort (cons +inf.0 (map expr-interval-start resets)) <))
-    (println beats)
     #`(context
         #,@(for/fold ([acc '()] #:result (reverse acc))
                      ([reset-start beats] [reset-end (cdr beats)])
