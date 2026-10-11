@@ -1,7 +1,7 @@
 #lang scribble/doc
 
 @require[(except-in scribble/manual index)
-         scribble-abbrevs/manual art]
+         scribble-abbrevs/manual (for-label art)]
 
 @title{Core Library}
 
