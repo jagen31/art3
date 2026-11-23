@@ -27,7 +27,7 @@
   
 (define-hom-within?-rule name (λ (l r _ __ ___)
   (syntax-parse #`(#,l #,r)
-    [(({~datum name} lname (... ...)) ({~datum name} rname (... ...)))
+    [(({~literal name} lname (... ...)) ({~literal name} rname (... ...)))
      ;; FIXME jagen use identifiers?
      (list-prefix? (syntax->datum #'(rname (... ...))) (syntax->datum #'(lname (... ...))) )])))
 

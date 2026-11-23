@@ -61,7 +61,24 @@
       (when (< li ri) (return r)))
     l))
 
-(define-for-syntax (max-index* is) (map add1 (foldl max-index (zero-index (length is)) is)))
+;; Per-axis bounding-box (one-past-max) over a list of indices.
+;; Each input index may have a different length; an item that doesn't
+;; reach a given axis simply doesn't contribute to that axis's max.
+;; The result's length is the deepest input's length.
+;;
+;; The previous version folded the lexicographic `max-index` from a
+;; (length is)-shaped zero accumulator, which both used the wrong
+;; shape (number of items, not depth of any item) and let the
+;; accumulator's shape mutate mid-fold; on mixed-shape input it
+;; would silently truncate the bounding box to a single axis and
+;; drop every deeper-indexed item downstream (cf. `do-ravel`).
+(define-for-syntax (max-index* is)
+  (define depth (apply max 0 (map length is)))
+  (for/list ([axis (in-range depth)])
+    (add1 (apply max 0
+                 (for/list ([ix (in-list is)]
+                            #:when (> (length ix) axis))
+                   (list-ref ix axis))))))
   
 (define-for-syntax (get-index-range max-ix)
   (cond

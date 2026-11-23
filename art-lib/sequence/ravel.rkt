@@ -279,10 +279,31 @@
 
       (apl-value/s result))))
 
+;; Lexicographic order on index lists, with shorter < longer at any
+;; common prefix.  For aligned (uniform-rank) arrays this is exactly
+;; row-major order.  For mixed-rank input (e.g. a section whose
+;; context contains items with both 1-D and 2-D indices), shorter
+;; indices sort before any deeper extension of the same prefix, which
+;; gives a well-defined total order to ravel into.
+(define-for-syntax (lex-index<? a b)
+  (let loop ([a a] [b b])
+    (cond
+      [(and (null? a) (null? b)) #f]
+      [(null? a) #t]
+      [(null? b) #f]
+      [(< (car a) (car b)) #t]
+      [(> (car a) (car b)) #f]
+      [else (loop (cdr a) (cdr b))])))
+
 (define-for-syntax (do-ravel w)
-  (define max-ix (max-index* (map expr-index w)))
-  (for/list ([ix (get-index-range max-ix)] [i (in-naturals)])
-    (define expr (context-ref/index w ix))
+  ;; Sort the input items by their index in lex / row-major order,
+  ;; then re-tag each as a fresh 1-D (index i).  Iterating the items
+  ;; directly (rather than enumerating a bounding box and looking up
+  ;; each cell) means we always emit every item, regardless of whether
+  ;; the input was aligned, sparse, or mixed-rank.  Recurse into
+  ;; nested seqs so they're 1-D inside too.
+  (define sorted (sort w lex-index<? #:key expr-index))
+  (for/list ([expr (in-list sorted)] [i (in-naturals)])
     (define expr* 
       (syntax-parse expr
         [({~literal seq} inner-expr ...)

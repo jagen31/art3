@@ -130,7 +130,7 @@
         (define iv* (car (merge-coordinates (list iv) (list #`(interval [0 #,size])) (lookup-ctxt))))
         (define id-ctxt (put-in-ctxt (get-id-ctxt repeat) iv*))
         (define-values (the-start the-end) (syntax-parse iv
-          [({~literal interval} ({~datum start} s) ({~datum end} e)) (values (syntax-e #'s) (syntax-e #'e))]))
+          [({~literal interval} [s e]) (values (syntax-e #'s) (syntax-e #'e))]))
        ]
        #:with (expr ...) (filter (λ (e) (context-within? (get-id-ctxt e) id-ctxt (lookup-ctxt))) (current-ctxt))
        #:with (del ...) (map delete-expr (syntax->list #'(expr ...)))
